@@ -40,10 +40,10 @@
         },
         "estimatedStartDate": { "type": "string", "description": "Start date string" },
         "estimatedEndDate": { "type": "string", "description": "End date string" },
-        "driveLink": { "type": "string", "description": "Project Google Drive folder" },
-        "githubRepoLink": { "type": "string", "description": "Source repository link" },
-        "testSuite": { "type": "string", "description": "Target test suite title" },
-        "version": { "type": "string", "description": "Software build version" }
+        "tag": { "type": "string", "description": "Project or test suite tag identifier" },
+        "tags": { "type": "array", "description": "List of tags associated with the project and test suite" },
+        "version": { "type": "string", "description": "Software build version" },
+        "revision": { "type": "string", "description": "Build revision" }
       },
       "required": ["projectName"]
     },

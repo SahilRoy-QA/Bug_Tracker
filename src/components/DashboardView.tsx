@@ -860,8 +860,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </span>
             {isUserAssignedToProject ? (
               <>
-                <div className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <div className="text-base font-bold text-slate-900 dark:text-white flex flex-wrap items-center gap-2">
                   <span>{projectMeta.projectName}</span>
+                  {projectMeta.tag && (
+                    <span className="text-[11px] font-mono font-medium px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/40">
+                      #{projectMeta.tag}
+                    </span>
+                  )}
                 </div>
                 {projectMeta.projectLink && (
                   <a 

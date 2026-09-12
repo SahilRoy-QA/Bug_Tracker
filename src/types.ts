@@ -40,11 +40,13 @@ export interface ProjectMeta {
   assignedQAMembers: string[];
   estimatedStartDate: string;
   estimatedEndDate: string;
-  driveLink: string;
-  githubRepoLink: string;
-  testSuite: string;
+  tag?: string;
+  tags?: string[];
   version: string;
   revision?: string;
+  driveLink?: string;
+  githubRepoLink?: string;
+  testSuite?: string;
 }
 
 export interface ExecutionReportStats {

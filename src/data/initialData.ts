@@ -6,9 +6,8 @@ export const initialProjectMeta: ProjectMeta = {
   assignedQAMembers: ['Sahil Roy', 'Jeet Mondal'],
   estimatedStartDate: '2026-07-06',
   estimatedEndDate: '2026-07-06',
-  driveLink: 'https://drive.google.com/drive/folders/qa-test-evidence-2026',
-  githubRepoLink: 'https://github.com/company/core-hr-app',
-  testSuite: 'Sprint 24 - Core HR & Access Control Regression Suite',
+  tag: 'Core-HR-Regression',
+  tags: ['Core-HR', 'Regression'],
   version: '5.0.0',
   revision: '2500'
 };

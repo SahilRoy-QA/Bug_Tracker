@@ -32,7 +32,8 @@ import {
   Sparkles,
   Info,
   LayoutGrid,
-  List
+  List,
+  Tag
 } from 'lucide-react';
 import { ProjectMeta, QAUser, UserPermissions, DefectItem } from '../types.ts';
 import { isUserAdmin } from '../utils/permissions.ts';
@@ -542,11 +543,16 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
 
             <div className="p-4 rounded-2xl bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/60 shadow-xs">
               <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-1 text-xs">
-                <span>Active Target Suite</span>
+                <span>Active Project &amp; Tag</span>
                 <FolderGit2 className="w-4 h-4 text-sky-500" />
               </div>
-              <div className="text-sm font-bold text-slate-900 dark:text-white truncate font-mono">
-                {projectMeta.projectName}
+              <div className="text-sm font-bold text-slate-900 dark:text-white truncate font-mono flex items-center gap-1.5">
+                <span>{projectMeta.projectName}</span>
+                {projectMeta.tag && (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/40 font-mono">
+                    #{projectMeta.tag}
+                  </span>
+                )}
               </div>
               <p className="text-[11px] text-slate-500 mt-1 font-mono">v{projectMeta.version} (Rev. {projectMeta.revision})</p>
             </div>
@@ -1122,7 +1128,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                 </div>
               </div>
 
-              {/* Row 2: Target App URL Link & Test Suite Name */}
+              {/* Row 2: Target App URL Link & Tag */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1.5">
@@ -1133,18 +1139,29 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                     type="url"
                     value={projectForm.projectLink}
                     onChange={e => setProjectForm({ ...projectForm, projectLink: e.target.value })}
+                    placeholder="https://app.internal/..."
                     className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Active Test Suite Name
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1.5">
+                    <Tag className="w-3.5 h-3.5 text-indigo-500" />
+                    <span>Tag (Project &amp; Test Suite Tag)</span>
                   </label>
                   <input
                     type="text"
-                    value={projectForm.testSuite}
-                    onChange={e => setProjectForm({ ...projectForm, testSuite: e.target.value })}
+                    value={projectForm.tag || ''}
+                    onChange={e => {
+                      const val = e.target.value;
+                      const tagsArray = val.split(',').map(t => t.trim()).filter(Boolean);
+                      setProjectForm({ 
+                        ...projectForm, 
+                        tag: val,
+                        tags: tagsArray.length > 0 ? tagsArray : undefined
+                      });
+                    }}
+                    placeholder="e.g. Core-HR-Regression, Release-v5.0, Sprint-24"
                     className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500"
                   />
                 </div>
@@ -1175,33 +1192,6 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                     value={projectForm.estimatedEndDate}
                     onChange={e => setProjectForm({ ...projectForm, estimatedEndDate: e.target.value })}
                     className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500"
-                  />
-                </div>
-              </div>
-
-              {/* Row 4: Google Drive & GitHub Links */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Google Drive Test Evidence Folder URL
-                  </label>
-                  <input
-                    type="url"
-                    value={projectForm.driveLink}
-                    onChange={e => setProjectForm({ ...projectForm, driveLink: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    GitHub Code Repository URL
-                  </label>
-                  <input
-                    type="url"
-                    value={projectForm.githubRepoLink}
-                    onChange={e => setProjectForm({ ...projectForm, githubRepoLink: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500"
                   />
                 </div>
               </div>
