@@ -35,6 +35,7 @@ import {
   List
 } from 'lucide-react';
 import { ProjectMeta, QAUser, UserPermissions, DefectItem } from '../types.ts';
+import { isUserAdmin } from '../utils/permissions.ts';
 import { 
   getAllQAUsers, 
   registerQAUser, 
@@ -267,8 +268,8 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
 
   // 5. Delete / Deactivate User
   const handleDeleteUser = async (targetUsername: string) => {
-    if (targetUsername.toLowerCase() === 'sahil_roy') {
-      showNotice('Cannot delete primary Administrator account.', 'error');
+    if (isUserAdmin(targetUsername)) {
+      showNotice('Cannot delete Administrator account.', 'error');
       return;
     }
 
@@ -534,7 +535,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                 <Trash2 className="w-4 h-4 text-rose-500" />
               </div>
               <div className="text-2xl font-bold text-slate-900 dark:text-white font-mono">
-                {users.filter(u => u.username === 'sahil_roy' || u.permissions?.canDeleteDefects).length}
+                {users.filter(u => isUserAdmin(u.username) || u.permissions?.canDeleteDefects).length}
               </div>
               <p className="text-[11px] text-slate-500 mt-1">Permission to remove test defects</p>
             </div>
@@ -609,7 +610,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
               </div>
             ) : (
               filteredUsers.map((user) => {
-                const isRoy = user.username.toLowerCase() === 'sahil_roy';
+                const isRoy = isUserAdmin(user.username) || user.role === 'Administrator' || user.role === 'Admin';
                 const canDelete = isRoy || !!user.permissions?.canDeleteDefects;
                 const canEditAll = isRoy || !!user.permissions?.canEditAllDefects;
                 const canClean = isRoy || !!user.permissions?.canCleanDatabase;
@@ -838,7 +839,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60">
                   {filteredUsers.map((user) => {
-                    const isRoy = user.username.toLowerCase() === 'sahil_roy';
+                    const isRoy = isUserAdmin(user.username) || user.role === 'Administrator' || user.role === 'Admin';
                     const canDelete = isRoy || !!user.permissions?.canDeleteDefects;
                     const canEditAll = isRoy || !!user.permissions?.canEditAllDefects;
                     const canClean = isRoy || !!user.permissions?.canCleanDatabase;

@@ -3,12 +3,12 @@ import { getCachedUser } from '../firebase/authService.ts';
 
 /**
  * Checks if a given username has full Administrator privileges.
- * Sahil Roy is the primary administrator.
+ * Sahil Roy and Administrator (@admin) are primary administrators.
  */
 export function isUserAdmin(username?: string | null): boolean {
   if (!username) return false;
   const clean = username.trim().toLowerCase();
-  if (clean === 'sahil_roy' || clean === 'roy') {
+  if (clean === 'sahil_roy' || clean === 'roy' || clean === 'admin' || clean === 'administrator') {
     return true;
   }
   const user = getCachedUser(clean);
@@ -62,8 +62,8 @@ export function canUserEditDefect(defect: DefectItem | null, username?: string |
     }
   }
 
-  if (cleanUser === 'sahil_roy' || cleanUser === 'roy') {
-    if (reportedBy.includes('sahil') || reportedBy.includes('roy')) {
+  if (cleanUser === 'sahil_roy' || cleanUser === 'roy' || cleanUser === 'admin') {
+    if (reportedBy.includes('sahil') || reportedBy.includes('roy') || reportedBy.includes('admin') || reportedBy.includes('administrator')) {
       return true;
     }
   }

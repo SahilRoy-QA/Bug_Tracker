@@ -1,6 +1,6 @@
 export type TestExecutionStatus = 'Passed' | 'Failed' | 'Blocked' | 'Pending';
 
-export type DefectStatus = 'Open' | 'In Progress' | 'Resolved' | 'Verified' | 'Closed' | 'Reopened';
+export type DefectStatus = 'Open' | 'In Progress' | 'Doubt' | 'Resolved' | 'Verified' | 'Closed' | 'Reopened';
 
 export type DefectSeverity = 'Critical' | 'High' | 'Medium' | 'Low';
 
@@ -10,9 +10,13 @@ export interface DefectItem {
   id: string; // unique ID or Bug ID
   bugId: string; // e.g. "BUG-101", "TC-OHRM-08"
   testCaseId: string; // e.g. "TC-01", "TC-02"
-  title: string;
+  title: string; // Defect Title
+  summary?: string; // Defect Summary
+  screenshotPng?: string; // Base64 data URL for PNG screenshot attachment
+  screenshotName?: string; // Original PNG file name
+  screenshotSize?: string; // Formatted size (e.g. "124 KB")
   module: string;
-  testExecutionStatus: TestExecutionStatus;
+  testExecutionStatus?: TestExecutionStatus;
   defectStatus: DefectStatus;
   severity: DefectSeverity;
   priority: DefectPriority;

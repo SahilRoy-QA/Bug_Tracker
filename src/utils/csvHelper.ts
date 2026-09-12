@@ -1,19 +1,17 @@
 import { DefectItem, ProjectMeta } from '../types.ts';
 
 export function exportDefectsToCSV(projectMeta: ProjectMeta, defects: DefectItem[]) {
-  const passed = defects.filter(d => d.testExecutionStatus === 'Passed').length;
-  const failed = defects.filter(d => d.testExecutionStatus === 'Failed').length;
-  const blocked = defects.filter(d => d.testExecutionStatus === 'Blocked').length;
-  const pending = defects.filter(d => d.testExecutionStatus === 'Pending').length;
+  const openCount = defects.filter(d => d.defectStatus === 'Open').length;
+  const inProgressCount = defects.filter(d => d.defectStatus === 'In Progress').length;
+  const doubtCount = defects.filter(d => d.defectStatus === 'Doubt').length;
+  const resolvedCount = defects.filter(d => ['Resolved', 'Verified', 'Closed'].includes(d.defectStatus)).length;
 
   const lines: string[] = [
-    'Test Execution Status Report,,,,,,,,,,,,,,,,',
+    'Defect Status & Tracking Report,,,,,,,,,,,,,,,',
     '',
-    `Total Executed,,,Passed,,,Passed,${passed}`,
-    `${defects.length},,,${passed},,,,Failed,${failed}`,
-    `,,,,,,,Blocked,${blocked}`,
-    `Failed,,,Blocked,,,,Pending,${pending}`,
-    `${failed},,,${blocked},,,,,`,
+    `Total Defects,,,Open,,,Resolved/Closed,${resolvedCount}`,
+    `${defects.length},,,${openCount},,,,Doubt,${doubtCount}`,
+    `,,,,,,,In Progress,${inProgressCount}`,
     '',
     `Project Name,,${projectMeta.projectName}`,
     `Project Link,,${projectMeta.projectLink}`,
@@ -23,8 +21,8 @@ export function exportDefectsToCSV(projectMeta: ProjectMeta, defects: DefectItem
     `Drive Link,,${projectMeta.driveLink}`,
     `Github Repository Link,,${projectMeta.githubRepoLink}`,
     '',
-    'DEFECT TRACKER SHEET DATABASE,,,,,,,,,,,,,,,,',
-    'Bug ID,Test Case ID,Summary / Title,Module,Execution Status,Defect Status,Severity,Priority,Assignee,Reporter,Environment,Expected Result,Actual Result,Drive Link,GitHub Link,Created Date,Updated Date'
+    'DEFECT TRACKER SHEET DATABASE,,,,,,,,,,,,,,,',
+    'Bug ID,Test Case ID,Defect Title,Defect Summary,Module,Defect Status,Severity,Priority,Assignee,Reporter,Environment,Expected Result,Actual Result,Drive Link,GitHub Link,Created Date,Updated Date'
   ];
 
   for (const d of defects) {
@@ -32,8 +30,8 @@ export function exportDefectsToCSV(projectMeta: ProjectMeta, defects: DefectItem
       escapeCSV(d.bugId),
       escapeCSV(d.testCaseId),
       escapeCSV(d.title),
+      escapeCSV(d.summary || ''),
       escapeCSV(d.module),
-      escapeCSV(d.testExecutionStatus),
       escapeCSV(d.defectStatus),
       escapeCSV(d.severity),
       escapeCSV(d.priority),
@@ -71,16 +69,24 @@ export function parseCSVToDefects(csvText: string): Partial<DefectItem>[] {
   const lines = csvText.split(/\r?\n/);
   const defects: Partial<DefectItem>[] = [];
 
+  let isSplitTitleSummary = false;
   let headerIndex = -1;
+  let hasExecutionStatusColumn = false;
+
   for (let i = 0; i < lines.length; i++) {
-    if (lines[i].includes('Bug ID') && lines[i].includes('Summary')) {
+    if (lines[i].includes('Bug ID')) {
       headerIndex = i;
+      if (lines[i].includes('Defect Title') && lines[i].includes('Defect Summary')) {
+        isSplitTitleSummary = true;
+      }
+      if (lines[i].includes('Execution Status')) {
+        hasExecutionStatusColumn = true;
+      }
       break;
     }
   }
 
   if (headerIndex === -1) {
-    // Attempt parsing from first line if header contains bugId
     headerIndex = 0;
   }
 
@@ -95,26 +101,35 @@ export function parseCSVToDefects(csvText: string): Partial<DefectItem>[] {
     const bugId = cells[0] || `BUG-IMP-${Date.now()}-${i}`;
     const testCaseId = cells[1] || '';
     const title = cells[2] || 'Imported Defect';
-    const module = cells[3] || 'General';
-    const testExecutionStatus = (['Passed', 'Failed', 'Blocked', 'Pending'].includes(cells[4]) ? cells[4] : 'Pending') as any;
-    const defectStatus = (['Open', 'In Progress', 'Resolved', 'Verified', 'Closed', 'Reopened'].includes(cells[5]) ? cells[5] : 'Open') as any;
-    const severity = (['Critical', 'High', 'Medium', 'Low'].includes(cells[6]) ? cells[6] : 'Medium') as any;
-    const priority = (cells[7] || 'P3 - Medium') as any;
-    const assignedTo = cells[8] || 'Unassigned';
-    const reportedBy = cells[9] || 'QA Engineer';
-    const environment = cells[10] || 'QA Staging';
-    const expectedResult = cells[11] || '';
-    const actualResult = cells[12] || '';
-    const driveLink = cells[13] || '';
-    const githubLink = cells[14] || '';
+    const summary = isSplitTitleSummary ? (cells[3] || '') : '';
+    let colIdx = isSplitTitleSummary ? 4 : 3;
+
+    const module = cells[colIdx++] || 'General';
+    
+    // If old CSV contains execution status column, skip it or read it
+    if (hasExecutionStatusColumn) {
+      colIdx++; // skip Execution Status
+    }
+
+    const rawDefectStatus = cells[colIdx++];
+    const defectStatus = (['Open', 'In Progress', 'Doubt', 'Resolved', 'Verified', 'Closed', 'Reopened'].includes(rawDefectStatus) ? rawDefectStatus : 'Open') as any;
+    const severity = (['Critical', 'High', 'Medium', 'Low'].includes(cells[colIdx]) ? cells[colIdx++] : 'Medium') as any;
+    const priority = (cells[colIdx++] || 'P3 - Medium') as any;
+    const assignedTo = cells[colIdx++] || 'Unassigned';
+    const reportedBy = cells[colIdx++] || 'QA Engineer';
+    const environment = cells[colIdx++] || 'QA Staging';
+    const expectedResult = cells[colIdx++] || '';
+    const actualResult = cells[colIdx++] || '';
+    const driveLink = cells[colIdx++] || '';
+    const githubLink = cells[colIdx++] || '';
 
     defects.push({
       id: `imported-${Date.now()}-${i}`,
       bugId,
       testCaseId,
       title,
+      summary,
       module,
-      testExecutionStatus,
       defectStatus,
       severity,
       priority,

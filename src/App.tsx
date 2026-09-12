@@ -12,8 +12,10 @@ import { DefectItem, ProjectMeta, ExecutionReportStats } from './types.ts';
 import { exportDefectsToCSV, parseCSVToDefects } from './utils/csvHelper.ts';
 import { 
   loadStoredDefects, 
+  loadStoredDefectsAsync,
   saveStoredDefects, 
   loadStoredProject, 
+  loadStoredProjectAsync,
   saveStoredProject, 
   resetStoredData 
 } from './utils/storage.ts';
@@ -102,9 +104,16 @@ export default function App() {
     }, 3500);
   };
 
-  // Real-time Firebase Firestore synchronization
+  // Real-time Firebase Firestore synchronization and client IndexedDB hydration
   useEffect(() => {
     setIsSyncing(true);
+
+    // Initial async hydration from high-capacity IndexedDB cache
+    loadStoredDefectsAsync().then(stored => {
+      if (Array.isArray(stored) && stored.length > 0) {
+        setDefects(prev => (prev.length === 0 ? stored : prev));
+      }
+    }).catch(console.warn);
 
     // Initial check to seed Firestore if first time
     seedInitialDataIfEmpty().catch(err => {
@@ -265,6 +274,10 @@ export default function App() {
         bugId: defectData.bugId || `BUG-${100 + nextNum}`,
         testCaseId: defectData.testCaseId || `TC-${String(nextNum).padStart(3, '0')}`,
         title: defectData.title || 'Untitled Defect',
+        summary: defectData.summary || '',
+        screenshotPng: defectData.screenshotPng || '',
+        screenshotName: defectData.screenshotName || '',
+        screenshotSize: defectData.screenshotSize || '',
         module: defectData.module || 'General',
         testExecutionStatus: defectData.testExecutionStatus || 'Failed',
         defectStatus: defectData.defectStatus || 'Open',

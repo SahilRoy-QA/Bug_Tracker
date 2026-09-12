@@ -2,7 +2,6 @@ import express from 'express';
 import path from 'path';
 import fs from 'fs';
 import { createServer as createViteServer } from 'vite';
-import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
 import { initialDefects, initialProjectMeta } from './src/data/initialData.ts';
 import { DefectItem, ProjectMeta } from './src/types.ts';
@@ -64,15 +63,6 @@ function persistStore() {
   } catch (err) {
     console.error('Failed to persist defect sheet database:', err);
   }
-}
-
-// AI Client lazy initialization
-let aiClient: GoogleGenAI | null = null;
-function getAIClient(): GoogleGenAI | null {
-  if (!aiClient && process.env.GEMINI_API_KEY) {
-    aiClient = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-  }
-  return aiClient;
 }
 
 // API Routes
@@ -236,60 +226,6 @@ app.post('/api/reset', (req, res) => {
   };
   persistStore();
   res.json({ success: true, message: 'Database reset to QA Execution Sheet template' });
-});
-
-// AI Assistant for QA Defect analysis / Root cause hypothesis
-app.post('/api/ai/analyze-defect', async (req, res) => {
-  const { title, actualResult, expectedResult, steps, module } = req.body;
-  const ai = getAIClient();
-
-  if (!ai) {
-    // Provide smart fallback heuristics if Gemini key isn't provided
-    res.json({
-      severitySuggestion: 'High',
-      prioritySuggestion: 'P2 - High',
-      summary: `Automated QA Analysis for ${module}: verify error boundary and input boundary conditions.`,
-      recommendedRootCause: 'Potential server-side validation error or unhandled promise rejection.',
-      testRecommendations: [
-        'Run regression across adjacent sub-modules',
-        'Verify session token expiry behavior',
-        'Validate cross-browser compatibility on Firefox & Edge'
-      ]
-    });
-    return;
-  }
-
-  try {
-    const prompt = `You are a Principal QA Automation and Defect Triage Engineer.
-Analyze this defect report for an enterprise application:
-- Module: ${module || 'N/A'}
-- Title: ${title || 'N/A'}
-- Expected Result: ${expectedResult || 'N/A'}
-- Actual Result: ${actualResult || 'N/A'}
-- Steps to Reproduce: ${steps || 'N/A'}
-
-Provide a JSON object with:
-- "severitySuggestion": "Critical" | "High" | "Medium" | "Low"
-- "prioritySuggestion": "P1 - Urgent" | "P2 - High" | "P3 - Medium" | "P4 - Low"
-- "summary": concise technical synopsis (1-2 sentences)
-- "recommendedRootCause": technical root cause hypothesis (1-2 sentences)
-- "testRecommendations": array of 3 actionable test steps to verify or prevent regression.
-Return ONLY raw JSON, no markdown fences.`;
-
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: prompt,
-      config: {
-        responseMimeType: 'application/json'
-      }
-    });
-
-    const parsed = JSON.parse(response.text || '{}');
-    res.json(parsed);
-  } catch (err: any) {
-    console.error('Gemini defect analysis failed:', err);
-    res.status(500).json({ error: 'AI analysis failed', details: err.message });
-  }
 });
 
 // Start server with Vite middleware in dev or static files in prod

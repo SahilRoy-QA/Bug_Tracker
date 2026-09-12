@@ -1,5 +1,12 @@
 import { DefectItem, ProjectMeta } from '../types.ts';
 import { initialDefects, initialProjectMeta } from '../data/initialData.ts';
+import { 
+  idbSaveDefects, 
+  idbGetDefects, 
+  idbClearDefects, 
+  idbSaveProject, 
+  idbGetProject 
+} from './idbStorage.ts';
 
 const STORAGE_KEYS = {
   DEFECTS: 'illusion_defect_sheet_records_v1',
@@ -8,7 +15,7 @@ const STORAGE_KEYS = {
 };
 
 /**
- * Load defects from local storage with fallback to initial QA seed data (empty by default)
+ * Load defects from local storage with fallback to initial QA seed data
  */
 export function loadStoredDefects(): DefectItem[] {
   if (typeof window === 'undefined') return [];
@@ -27,28 +34,77 @@ export function loadStoredDefects(): DefectItem[] {
 }
 
 /**
- * Clear all defects from local storage
+ * Asynchronously loads defects from high-capacity IndexedDB, with localStorage fallback
+ */
+export async function loadStoredDefectsAsync(): Promise<DefectItem[]> {
+  try {
+    const idbData = await idbGetDefects();
+    if (idbData && Array.isArray(idbData) && idbData.length > 0) {
+      return idbData;
+    }
+  } catch (err) {
+    console.warn('IndexedDB read fallback notice:', err);
+  }
+  return loadStoredDefects();
+}
+
+/**
+ * Clear all defects from local storage and IndexedDB
  */
 export function clearStoredDefects(): void {
   if (typeof window === 'undefined') return;
+  idbClearDefects().catch(console.warn);
   try {
     localStorage.setItem(STORAGE_KEYS.DEFECTS, JSON.stringify([]));
     localStorage.setItem(STORAGE_KEYS.LAST_SYNC, new Date().toISOString());
   } catch (err) {
-    console.error('Could not clear defects in localStorage:', err);
+    console.warn('Could not clear defects in localStorage:', err);
   }
 }
 
 /**
- * Save defects directly to local storage for durable persistence on Vercel & static hosting
+ * Save defects safely to both IndexedDB (unlimited quota) and localStorage (resilient fallback).
+ * If localStorage quota is exceeded (e.g., due to screenshots), it stores a lightweight sanitized copy
+ * in localStorage while preserving full data including screenshots in IndexedDB.
  */
 export function saveStoredDefects(defects: DefectItem[]): void {
   if (typeof window === 'undefined') return;
+
+  // 1. Always persist complete defects with screenshots into high-capacity IndexedDB
+  idbSaveDefects(defects).catch(err => {
+    console.warn('Background IndexedDB save notice:', err);
+  });
+
+  // 2. Attempt localStorage save
   try {
     localStorage.setItem(STORAGE_KEYS.DEFECTS, JSON.stringify(defects));
     localStorage.setItem(STORAGE_KEYS.LAST_SYNC, new Date().toISOString());
-  } catch (err) {
-    console.error('Could not save defects to localStorage:', err);
+  } catch (err: any) {
+    // Check if error is quota exceeded
+    const isQuotaError = 
+      err?.name === 'QuotaExceededError' || 
+      err?.name === 'NS_ERROR_DOM_QUOTA_REACHED' ||
+      err?.code === 22 ||
+      (err?.message && err.message.toLowerCase().includes('quota'));
+
+    if (isQuotaError) {
+      try {
+        // Strip heavy base64 screenshots for the localStorage copy to stay well under 5MB quota
+        const sanitizedDefects = defects.map(d => {
+          if (d.screenshotPng && d.screenshotPng.length > 1000) {
+            const { screenshotPng, ...rest } = d;
+            return rest as DefectItem;
+          }
+          return d;
+        });
+        localStorage.setItem(STORAGE_KEYS.DEFECTS, JSON.stringify(sanitizedDefects));
+        localStorage.setItem(STORAGE_KEYS.LAST_SYNC, new Date().toISOString());
+      } catch (innerErr) {
+        console.warn('LocalStorage quota limit reached; IndexedDB is active as primary cache.');
+      }
+    } else {
+      console.warn('LocalStorage save notice:', err);
+    }
   }
 }
 
@@ -72,15 +128,31 @@ export function loadStoredProject(): ProjectMeta {
 }
 
 /**
- * Save project metadata to local storage
+ * Asynchronously load project meta with IndexedDB support
+ */
+export async function loadStoredProjectAsync(): Promise<ProjectMeta> {
+  try {
+    const idbProject = await idbGetProject();
+    if (idbProject && idbProject.projectName) {
+      return idbProject;
+    }
+  } catch (err) {
+    console.warn('IndexedDB project read notice:', err);
+  }
+  return loadStoredProject();
+}
+
+/**
+ * Save project metadata to local storage and IndexedDB
  */
 export function saveStoredProject(project: ProjectMeta): void {
   if (typeof window === 'undefined') return;
+  idbSaveProject(project).catch(console.warn);
   try {
     localStorage.setItem(STORAGE_KEYS.PROJECT, JSON.stringify(project));
     localStorage.setItem(STORAGE_KEYS.LAST_SYNC, new Date().toISOString());
   } catch (err) {
-    console.error('Could not save project meta to localStorage:', err);
+    console.warn('Could not save project meta to localStorage:', err);
   }
 }
 
@@ -92,3 +164,4 @@ export function resetStoredData(): { defects: DefectItem[]; project: ProjectMeta
   saveStoredProject(initialProjectMeta);
   return { defects: initialDefects, project: initialProjectMeta };
 }
+

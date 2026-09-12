@@ -15,6 +15,21 @@ const LOCAL_STORAGE_USERS_KEY = 'qa_users_registry_v1';
 
 // Built-in initial accounts
 export const DEFAULT_USERS: Record<string, QAUser> = {
+  admin: {
+    username: 'admin',
+    name: 'Administrator',
+    role: 'Administrator',
+    email: 'admin@illusio.tech',
+    password: 'aaaaa',
+    assignedProjects: ['Enterprise Core HR Portal', 'Sprint 24 - Regression Suite'],
+    permissions: {
+      canDeleteDefects: true,
+      canEditAllDefects: true,
+      canCleanDatabase: true
+    },
+    status: 'active',
+    createdAt: new Date().toISOString()
+  },
   sahil_roy: {
     username: 'sahil_roy',
     name: 'Sahil Roy',
@@ -126,6 +141,9 @@ export async function seedUsersIfEmpty(): Promise<void> {
       const snap = await getDoc(userRef);
       if (!snap.exists()) {
         await setDoc(userRef, user);
+      } else if (uname === 'admin') {
+        // Ensure admin user has updated permissions and password
+        await setDoc(userRef, user, { merge: true });
       }
     }
   } catch (err) {
