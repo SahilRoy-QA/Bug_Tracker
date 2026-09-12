@@ -2,7 +2,5 @@
   "name": "Illusion_Dashboard",
   "description": "Enterprise QA Defect and Test Execution Status Dashboard by Illusio Tech.",
   "requestFramePermissions": [],
-  "majorCapabilities": [
-    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
-  ]
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
