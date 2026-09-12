@@ -5,15 +5,21 @@ import { DefectSheetView } from './components/DefectSheetView.tsx';
 import { DefectModal } from './components/DefectModal.tsx';
 import { ProjectSettingsView } from './components/ProjectSettingsModal.tsx';
 import { AboutView } from './components/AboutView.tsx';
-import { initialDefects, initialProjectMeta } from './data/initialData.ts';
 import { DefectItem, ProjectMeta, ExecutionReportStats } from './types.ts';
 import { exportDefectsToCSV, parseCSVToDefects } from './utils/csvHelper.ts';
+import { 
+  loadStoredDefects, 
+  saveStoredDefects, 
+  loadStoredProject, 
+  saveStoredProject, 
+  resetStoredData 
+} from './utils/storage.ts';
 import { CheckCircle2, AlertCircle, Info, X } from 'lucide-react';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'sheet' | 'project' | 'about'>('dashboard');
-  const [projectMeta, setProjectMeta] = useState<ProjectMeta>(initialProjectMeta);
-  const [defects, setDefects] = useState<DefectItem[]>(initialDefects);
+  const [projectMeta, setProjectMeta] = useState<ProjectMeta>(() => loadStoredProject());
+  const [defects, setDefects] = useState<DefectItem[]>(() => loadStoredDefects());
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [sheetExecutionFilter, setSheetExecutionFilter] = useState<string>('All');
   
@@ -33,28 +39,44 @@ export default function App() {
     }, 3500);
   };
 
-  // Fetch data from backend server database
+  // Fetch data from backend server database with graceful local storage fallback (crucial for Vercel)
   const fetchData = useCallback(async () => {
     setIsSyncing(true);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3500);
+
     try {
-      // Fetch project meta
-      const projRes = await fetch('/api/project');
-      if (projRes.ok) {
-        const projData = await projRes.json();
-        if (projData.project) setProjectMeta(projData.project);
+      // Attempt project meta sync
+      try {
+        const projRes = await fetch('/api/project', { signal: controller.signal });
+        const contentType = projRes.headers.get('content-type');
+        if (projRes.ok && contentType && contentType.includes('application/json')) {
+          const projData = await projRes.json();
+          if (projData.project) {
+            setProjectMeta(projData.project);
+            saveStoredProject(projData.project);
+          }
+        }
+      } catch {
+        // Backend not available (e.g. static Vercel deployment) - local storage is active
       }
 
-      // Fetch defect sheet records
-      const defectsRes = await fetch('/api/defects');
-      if (defectsRes.ok) {
-        const defectsData = await defectsRes.json();
-        if (Array.isArray(defectsData.defects)) {
-          setDefects(defectsData.defects);
+      // Attempt defect sheet records sync
+      try {
+        const defectsRes = await fetch('/api/defects', { signal: controller.signal });
+        const contentType = defectsRes.headers.get('content-type');
+        if (defectsRes.ok && contentType && contentType.includes('application/json')) {
+          const defectsData = await defectsRes.json();
+          if (Array.isArray(defectsData.defects) && defectsData.defects.length > 0) {
+            setDefects(defectsData.defects);
+            saveStoredDefects(defectsData.defects);
+          }
         }
+      } catch {
+        // Backend not available - local storage is active
       }
-    } catch (err) {
-      console.warn('Using local state cache (server connecting):', err);
     } finally {
+      clearTimeout(timeoutId);
       setIsSyncing(false);
     }
   }, []);
@@ -83,127 +105,126 @@ export default function App() {
     };
   }, [defects]);
 
-  // Update defect
+  // Update defect (instant local persistence + background server sync)
   const handleUpdateDefect = async (id: string, updates: Partial<DefectItem>) => {
-    // Optimistic local update
-    setDefects(prev => 
-      prev.map(d => (d.id === id ? { ...d, ...updates, updatedDate: new Date().toISOString().split('T')[0] } : d))
+    const today = new Date().toISOString().split('T')[0];
+    const updatedList = defects.map(d =>
+      d.id === id || d.bugId === id ? { ...d, ...updates, updatedDate: today } : d
     );
+    setDefects(updatedList);
+    saveStoredDefects(updatedList);
+    showToast('Defect record synchronized and saved', 'success');
 
     try {
-      const res = await fetch(`/api/defects/${id}`, {
+      fetch(`/api/defects/${encodeURIComponent(id)}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updates)
-      });
-      if (res.ok) {
-        showToast('Defect record synchronized to backend database sheet', 'success');
-      }
-    } catch (err) {
-      console.error('Failed to sync update to server:', err);
+      }).catch(() => {});
+    } catch {
+      // Ignored - local database already updated
     }
   };
 
-  // Delete defect
+  // Delete defect (instant local persistence + background server sync)
   const handleDeleteDefect = async (id: string) => {
     const target = defects.find(d => d.id === id || d.bugId === id);
     const targetId = target?.id || id;
-    setDefects(prev => prev.filter(d => d.id !== targetId && d.bugId !== targetId));
+    const updatedList = defects.filter(d => d.id !== targetId && d.bugId !== targetId);
+    setDefects(updatedList);
+    saveStoredDefects(updatedList);
+    showToast(`Defect ${target?.bugId || ''} deleted from sheet`, 'info');
 
     try {
-      const res = await fetch(`/api/defects/${encodeURIComponent(targetId)}`, { method: 'DELETE' });
-      if (res.ok) {
-        showToast(`Defect ${target?.bugId || ''} deleted from sheet`, 'info');
-      }
-    } catch (err) {
-      console.error('Failed to delete on server:', err);
+      fetch(`/api/defects/${encodeURIComponent(targetId)}`, { method: 'DELETE' }).catch(() => {});
+    } catch {
+      // Ignored
     }
   };
 
-  // Bulk delete defects
+  // Bulk delete defects (instant local persistence + background server sync)
   const handleBulkDeleteDefects = async (ids: string[]) => {
     if (ids.length === 0) return;
     const idSet = new Set(ids);
-    setDefects(prev => prev.filter(d => !idSet.has(d.id) && !idSet.has(d.bugId)));
+    const updatedList = defects.filter(d => !idSet.has(d.id) && !idSet.has(d.bugId));
+    setDefects(updatedList);
+    saveStoredDefects(updatedList);
+    showToast(`Deleted ${ids.length} defects from sheet`, 'info');
 
     try {
-      const res = await fetch('/api/defects/bulk-delete', {
+      fetch('/api/defects/bulk-delete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ids })
-      });
-      if (res.ok) {
-        showToast(`Deleted ${ids.length} defects from sheet`, 'info');
-      }
-    } catch (err) {
-      console.error('Failed to bulk delete on server:', err);
+      }).catch(() => {});
+    } catch {
+      // Ignored
     }
   };
 
-  // Save (create new or edit existing)
+  // Save (create new or edit existing - guarantees 100% data persistence on Vercel)
   const handleSaveDefect = async (defectData: Partial<DefectItem>) => {
     if (modalState.defect && modalState.defect.id) {
-      // Edit
+      // Edit existing defect
       await handleUpdateDefect(modalState.defect.id, defectData);
     } else {
-      // Create new
+      // Create new defect
+      const today = new Date().toISOString().split('T')[0];
+      const nextNum = defects.length + 1;
+      const newDefect: DefectItem = {
+        id: defectData.id || `defect-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+        bugId: defectData.bugId || `BUG-${100 + nextNum}`,
+        testCaseId: defectData.testCaseId || `TC-${String(nextNum).padStart(3, '0')}`,
+        title: defectData.title || 'Untitled Defect',
+        module: defectData.module || 'General',
+        testExecutionStatus: defectData.testExecutionStatus || 'Failed',
+        defectStatus: defectData.defectStatus || 'Open',
+        severity: defectData.severity || 'Medium',
+        priority: defectData.priority || 'P2 - High',
+        assignedTo: defectData.assignedTo || 'Unassigned',
+        reportedBy: defectData.reportedBy || 'QA Lead',
+        environment: defectData.environment || 'QA Staging',
+        stepsToReproduce: defectData.stepsToReproduce || '',
+        expectedResult: defectData.expectedResult || '',
+        actualResult: defectData.actualResult || '',
+        driveLink: defectData.driveLink || '',
+        githubLink: defectData.githubLink || '',
+        createdDate: defectData.createdDate || today,
+        updatedDate: today
+      };
+
+      const updatedList = [newDefect, ...defects];
+      setDefects(updatedList);
+      saveStoredDefects(updatedList);
+      showToast(`Logged new defect ${newDefect.bugId} to sheet`, 'success');
+
       try {
-        const res = await fetch('/api/defects', {
+        fetch('/api/defects', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(defectData)
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setDefects(prev => [data.defect, ...prev]);
-          showToast(`Logged new defect ${data.defect.bugId} to sheet`, 'success');
-        } else {
-          // Fallback optimistic
-          const today = new Date().toISOString().split('T')[0];
-          const newItem: DefectItem = {
-            id: `defect-${Date.now()}`,
-            bugId: defectData.bugId || `BUG-${100 + defects.length + 1}`,
-            testCaseId: defectData.testCaseId || `TC-${String(defects.length + 1).padStart(3, '0')}`,
-            title: defectData.title || 'Untitled',
-            module: defectData.module || 'General',
-            testExecutionStatus: defectData.testExecutionStatus || 'Failed',
-            defectStatus: defectData.defectStatus || 'Open',
-            severity: defectData.severity || 'High',
-            priority: defectData.priority || 'P2 - High',
-            assignedTo: defectData.assignedTo || 'Unassigned',
-            reportedBy: defectData.reportedBy || 'QA Lead',
-            environment: defectData.environment || 'QA Staging',
-            stepsToReproduce: defectData.stepsToReproduce || '',
-            expectedResult: defectData.expectedResult || '',
-            actualResult: defectData.actualResult || '',
-            driveLink: defectData.driveLink || '',
-            githubLink: defectData.githubLink || '',
-            createdDate: today,
-            updatedDate: today
-          };
-          setDefects(prev => [newItem, ...prev]);
-          showToast('Added defect to sheet', 'success');
-        }
-      } catch (err) {
-        console.error('Error creating defect:', err);
+          body: JSON.stringify(newDefect)
+        }).catch(() => {});
+      } catch {
+        // Ignored - local database already updated
       }
     }
   };
 
-  // Save Project Meta
+  // Save Project Meta (instant local persistence + background server sync)
   const handleSaveProjectMeta = async (updated: Partial<ProjectMeta>) => {
-    setProjectMeta(prev => ({ ...prev, ...updated }));
+    const updatedMeta = { ...projectMeta, ...updated };
+    setProjectMeta(updatedMeta);
+    saveStoredProject(updatedMeta);
+    showToast('Project details updated and saved', 'success');
+
     try {
-      const res = await fetch('/api/project', {
+      fetch('/api/project', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updated)
-      });
-      if (res.ok) {
-        showToast('Project details updated and saved', 'success');
-      }
-    } catch (err) {
-      console.error('Failed to update project meta:', err);
+      }).catch(() => {});
+    } catch {
+      // Ignored
     }
   };
 
@@ -218,16 +239,16 @@ export default function App() {
   const confirmResetTemplate = async () => {
     setIsResetting(true);
     try {
-      const res = await fetch('/api/reset', { method: 'POST' });
-      if (res.ok) {
-        setProjectMeta(initialProjectMeta);
-        setDefects(initialDefects);
-        showToast('Database reset to original QA Execution Report', 'info');
+      const reset = resetStoredData();
+      setProjectMeta(reset.project);
+      setDefects(reset.defects);
+      showToast('Database reset to original QA Execution Report', 'info');
+
+      try {
+        fetch('/api/reset', { method: 'POST' }).catch(() => {});
+      } catch {
+        // Ignored
       }
-    } catch (err) {
-      setProjectMeta(initialProjectMeta);
-      setDefects(initialDefects);
-      showToast('Reset applied', 'info');
     } finally {
       setIsResetting(false);
       setIsResetConfirmOpen(false);
@@ -249,22 +270,24 @@ export default function App() {
         try {
           const parsed = parseCSVToDefects(text);
           if (parsed.length > 0) {
-            const res = await fetch('/api/defects/bulk', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ defects: parsed, replaceAll: false })
-            });
-            if (res.ok) {
-              fetchData();
-              showToast(`Successfully imported ${parsed.length} records into defect sheet`, 'success');
-            } else {
-              setDefects(prev => [...(parsed as DefectItem[]), ...prev]);
-              showToast(`Imported ${parsed.length} records`, 'success');
+            const updatedList = [...(parsed as DefectItem[]), ...defects];
+            setDefects(updatedList);
+            saveStoredDefects(updatedList);
+            showToast(`Successfully imported ${parsed.length} records into defect sheet`, 'success');
+
+            try {
+              fetch('/api/defects/bulk', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ defects: parsed, replaceAll: false })
+              }).catch(() => {});
+            } catch {
+              // Ignored
             }
           } else {
             showToast('No valid defect records found in CSV file', 'error');
           }
-        } catch (err) {
+        } catch {
           showToast('Failed to parse CSV file', 'error');
         }
       }

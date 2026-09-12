@@ -270,7 +270,7 @@ export const DefectSheetView: React.FC<DefectSheetViewProps> = ({
               </button>
             </div>
 
-            <label className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-medium bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-750 text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white border border-slate-200 dark:border-slate-700/80 cursor-pointer transition shrink-0">
+            <label className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-medium bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white border border-slate-200 dark:border-slate-700/80 cursor-pointer transition shrink-0">
               <Upload className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
               <span className="hidden sm:inline">Import</span>
               <input
@@ -283,7 +283,7 @@ export const DefectSheetView: React.FC<DefectSheetViewProps> = ({
 
             <button
               onClick={onExportCSV}
-              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-medium bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-750 text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white border border-slate-200 dark:border-slate-700/80 transition shrink-0"
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-medium bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white border border-slate-200 dark:border-slate-700/80 transition shrink-0"
               title="Export formatted CSV Defect Tracker Sheet"
             >
               <Download className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
@@ -292,7 +292,7 @@ export const DefectSheetView: React.FC<DefectSheetViewProps> = ({
 
             <button
               onClick={onResetTemplate}
-              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-medium bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-750 text-slate-600 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 border border-slate-200 dark:border-slate-700/80 transition shrink-0"
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-medium bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-600 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 border border-slate-200 dark:border-slate-700/80 transition shrink-0"
               title="Reset template sample"
             >
               <RotateCcw className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
@@ -437,7 +437,7 @@ export const DefectSheetView: React.FC<DefectSheetViewProps> = ({
       {/* Mobile Card List View (Active on small screens when 'cards' view is selected) */}
       <div className={`space-y-3 ${mobileLayout === 'cards' ? 'block md:hidden' : 'hidden'}`}>
         {filteredDefects.length === 0 ? (
-          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-750/70 p-8 text-center text-slate-500 dark:text-slate-400 shadow-xs">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700/70 p-8 text-center text-slate-500 dark:text-slate-400 shadow-xs">
             <FileSpreadsheet className="w-8 h-8 text-slate-400 dark:text-slate-500 mx-auto mb-2 opacity-60" />
             <p className="text-xs font-medium">No defects or test cases match your filter criteria.</p>
             <button
@@ -453,7 +453,7 @@ export const DefectSheetView: React.FC<DefectSheetViewProps> = ({
             return (
               <div 
                 key={`card-${d.id}`}
-                className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-750/70 p-4 shadow-xs space-y-3 transition hover:border-slate-300 dark:hover:border-slate-600"
+                className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700/70 p-4 shadow-xs space-y-3 transition hover:border-slate-300 dark:hover:border-slate-600"
               >
                 {/* Header: ID, Module, and Menu / Quick Edit */}
                 <div className="flex items-start justify-between gap-2">

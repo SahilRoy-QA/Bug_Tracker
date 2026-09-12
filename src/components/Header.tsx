@@ -95,27 +95,37 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
         {/* Main Header Bar */}
         <div className="flex items-center justify-between py-2 sm:py-2.5 gap-2 sm:gap-4">
-          {/* App Branding & Project Title - Guaranteed no wrapping or overlapping */}
+          {/* App Branding & Project Title - Click to go to Dashboard */}
           <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
-            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-indigo-50 dark:bg-indigo-950 border border-indigo-200 dark:border-indigo-500/30 flex items-center justify-center shrink-0 shadow-xs">
-              <Bug className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-            </div>
-            <div className="shrink-0">
-              <div className="flex items-center gap-1.5 sm:gap-2">
-                <h1 className="text-xs sm:text-sm md:text-base font-bold tracking-tight text-slate-900 dark:text-slate-100 whitespace-nowrap">
-                  Illusion_Dashboard
-                </h1>
-                <span className="hidden md:inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700/80 truncate max-w-[120px]">
-                  {projectMeta.projectName}
-                </span>
-                <span className="hidden lg:inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/40">
-                  <Database className="w-3 h-3" />
-                  Synced
-                </span>
+            <button
+              onClick={() => setActiveTab('dashboard')}
+              className="flex items-center gap-2 sm:gap-2.5 text-left focus:outline-none group cursor-pointer"
+              title="Go to Dashboard"
+              aria-label="Go to Dashboard"
+            >
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-indigo-50 dark:bg-indigo-950 border border-indigo-200 dark:border-indigo-500/30 flex items-center justify-center shrink-0 shadow-xs group-hover:border-indigo-400 dark:group-hover:border-indigo-400 group-hover:bg-indigo-100/50 dark:group-hover:bg-indigo-900/40 transition">
+                <Bug className="w-4 h-4 text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform" />
               </div>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 hidden sm:block truncate">
-                Quality Engineering &amp; Defect Tracker by Illusio Tech
-              </p>
+              <div className="shrink-0">
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <h1 className="text-xs sm:text-sm md:text-base font-bold tracking-tight text-slate-900 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 whitespace-nowrap transition-colors">
+                    Illusion_Dashboard
+                  </h1>
+                </div>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 hidden sm:block truncate">
+                  Quality Engineering &amp; Defect Tracker by Illusio Tech
+                </p>
+              </div>
+            </button>
+
+            <div className="hidden md:flex items-center gap-1.5 shrink-0">
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700/80 truncate max-w-[120px]">
+                {projectMeta.projectName}
+              </span>
+              <span className="hidden lg:inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/40">
+                <Database className="w-3 h-3" />
+                Synced
+              </span>
             </div>
           </div>
 
@@ -152,7 +162,7 @@ export const Header: React.FC<HeaderProps> = ({
             <div className="relative md:hidden" ref={menuRef}>
               <button
                 onClick={() => setIsMenuOpen(prev => !prev)}
-                className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-800 dark:text-slate-100 font-medium transition border border-slate-200 dark:border-slate-700/80 shadow-xs"
+                className="inline-flex items-center gap-1 sm:gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 hover:text-slate-900 dark:hover:text-white font-medium transition border border-slate-200 dark:border-slate-700/80 dark:hover:border-slate-600 shadow-xs"
                 aria-expanded={isMenuOpen}
                 aria-label="Toggle navigation menu"
               >
@@ -254,7 +264,7 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               onClick={onRefresh}
               disabled={isSyncing}
-              className="hidden xs:inline-flex items-center justify-center p-1.5 sm:px-2 sm:py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/90 dark:hover:bg-slate-750 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition border border-slate-200 dark:border-slate-700/60"
+              className="hidden xs:inline-flex items-center justify-center p-1.5 sm:px-2 sm:py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/90 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition border border-slate-200 dark:border-slate-700/60"
               title="Refresh database records"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-indigo-500 dark:text-indigo-400' : ''}`} />
@@ -263,7 +273,7 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Theme Toggle Button */}
             <button
               onClick={toggleTheme}
-              className="inline-flex items-center justify-center p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/90 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 transition border border-slate-200 dark:border-slate-700/60"
+              className="inline-flex items-center justify-center p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/90 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 transition border border-slate-200 dark:border-slate-700/60"
               title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
               aria-label="Toggle dark/light theme"
             >
