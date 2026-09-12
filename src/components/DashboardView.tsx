@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { 
   CheckCircle2, 
   XCircle, 
@@ -16,7 +16,10 @@ import {
   LogOut,
   User,
   ShieldCheck,
-  KeyRound
+  KeyRound,
+  Shield,
+  UserPlus,
+  FolderGit2
 } from 'lucide-react';
 import { 
   PieChart, 
@@ -30,8 +33,10 @@ import {
   YAxis, 
   CartesianGrid 
 } from 'recharts';
-import { DefectItem, ProjectMeta, ExecutionReportStats } from '../types.ts';
+import { DefectItem, ProjectMeta, ExecutionReportStats, QAUser } from '../types.ts';
 import { useTheme } from '../context/ThemeContext.tsx';
+import { isUserAdmin } from '../utils/permissions.ts';
+import { getCachedUser, getQAUser, getAllQAUsers } from '../firebase/authService.ts';
 
 interface DashboardViewProps {
   projectMeta: ProjectMeta;
@@ -39,6 +44,7 @@ interface DashboardViewProps {
   stats: ExecutionReportStats;
   onNavigateToSheet: (filter?: string) => void;
   onSelectDefect: (defect: DefectItem) => void;
+  onNavigateToAdmin?: () => void;
   currentUser?: string;
   onLogout?: () => void;
   onChangePassword?: () => void;
@@ -50,20 +56,29 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   stats,
   onNavigateToSheet,
   onSelectDefect,
+  onNavigateToAdmin,
   currentUser = 'sahil_roy',
   onLogout,
   onChangePassword
 }) => {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
+  const isAdmin = isUserAdmin(currentUser);
 
   // Test Execution Chart Data matching the user's report
-  const executionChartData = useMemo(() => [
-    { name: 'Passed', value: stats.passed, color: '#10b981' }, // Emerald-500
-    { name: 'Failed', value: stats.failed, color: '#e11d48' }, // Rose-600
-    { name: 'Blocked', value: stats.blocked, color: '#facc15' }, // Light Yellow (yellow-400)
-    { name: 'Pending', value: stats.pending, color: '#64748b' }, // Slate-500
-  ].filter(item => item.value > 0), [stats]);
+  const executionChartData = useMemo(() => {
+    const data = [
+      { name: 'Passed', value: stats.passed, color: '#10b981' }, // Emerald-500
+      { name: 'Failed', value: stats.failed, color: '#e11d48' }, // Rose-600
+      { name: 'Blocked', value: stats.blocked, color: '#facc15' }, // Light Yellow (yellow-400)
+      { name: 'Pending', value: stats.pending, color: '#64748b' }, // Slate-500
+    ].filter(item => item.value > 0);
+
+    if (data.length === 0) {
+      return [{ name: 'No Tests', value: 1, color: isDark ? '#334155' : '#e2e8f0' }];
+    }
+    return data;
+  }, [stats, isDark]);
 
   // Severity Breakdown Data
   const severityData = useMemo(() => {
@@ -113,13 +128,102 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     return defects.filter(d => d.testExecutionStatus === 'Blocked');
   }, [defects]);
 
+  // Current logged in user profile & team member registry
+  const [currentUserProfile, setCurrentUserProfile] = useState<QAUser | null>(() => getCachedUser(currentUser));
+  const [teamUsers, setTeamUsers] = useState<QAUser[]>([]);
+
+  useEffect(() => {
+    let isMounted = true;
+    getQAUser(currentUser).then(u => {
+      if (isMounted && u) setCurrentUserProfile(u);
+    });
+    getAllQAUsers().then(users => {
+      if (isMounted && users) setTeamUsers(users);
+    });
+    return () => { isMounted = false; };
+  }, [currentUser]);
+
+  // Helper to remove any designations in parentheses, e.g. "Sahil Roy (Lead QA)" -> "Sahil Roy"
+  const cleanMemberName = (name: string) => name.replace(/\s*\([^)]*\)/g, '').trim();
+
+  // User's assigned projects
+  const userAssignedProjects = useMemo(() => {
+    if (currentUserProfile?.assignedProjects && currentUserProfile.assignedProjects.length > 0) {
+      return currentUserProfile.assignedProjects;
+    }
+    // Fallback: If admin or primary account, default to active project
+    if (isAdmin || currentUser.toLowerCase() === 'sahil_roy') {
+      return [projectMeta.projectName];
+    }
+    return [];
+  }, [currentUserProfile, isAdmin, currentUser, projectMeta.projectName]);
+
+  // Check if the current user is assigned to this active project
+  const isUserAssignedToProject = useMemo(() => {
+    if (isAdmin || currentUser.toLowerCase() === 'sahil_roy') return true;
+    return userAssignedProjects.some(
+      p => p.trim().toLowerCase() === projectMeta.projectName.trim().toLowerCase()
+    );
+  }, [userAssignedProjects, isAdmin, currentUser, projectMeta.projectName]);
+
+  // Assigned QA Members for this specific project:
+  // IF AND ONLY IF a QA member is assigned to this specific project, then and only then show them,
+  // and strip any designation from their display name!
+  const assignedQAMembersForThisProject = useMemo(() => {
+    const matchedNames = new Set<string>();
+
+    // 1. From database / registered team users
+    teamUsers.forEach(u => {
+      const isAssigned = (u.assignedProjects || []).some(
+        p => p.trim().toLowerCase() === projectMeta.projectName.trim().toLowerCase()
+      );
+      if (isAssigned) {
+        matchedNames.add(cleanMemberName(u.name || u.username));
+      }
+    });
+
+    // 2. From project metadata if already assigned to this project
+    (projectMeta.assignedQAMembers || []).forEach(rawMember => {
+      const clean = cleanMemberName(rawMember);
+      const lower = clean.toLowerCase();
+      if (
+        clean && 
+        !lower.includes('alex morgan') && 
+        !lower.includes('alex') &&
+        !lower.includes('priya sharma') &&
+        !lower.includes('priya')
+      ) {
+        // If team user exists, verify project assignment
+        const found = teamUsers.find(
+          u => cleanMemberName(u.name).toLowerCase() === lower ||
+               u.username.toLowerCase() === lower
+        );
+        if (found) {
+          const isAssigned = (found.assignedProjects || []).some(
+            p => p.trim().toLowerCase() === projectMeta.projectName.trim().toLowerCase()
+          );
+          if (isAssigned) {
+            matchedNames.add(clean);
+          }
+        } else {
+          // If no separate user record found, keep member from project metadata
+          matchedNames.add(clean);
+        }
+      }
+    });
+
+    return Array.from(matchedNames).filter(
+      name => !name.toLowerCase().includes('alex') && !name.toLowerCase().includes('priya')
+    );
+  }, [teamUsers, projectMeta.assignedQAMembers, projectMeta.projectName]);
+
   return (
     <div className="space-y-6 pb-12">
-      {/* Top QA Engineer Session Bar with Prominent Logout */}
+      {/* Top QA Engineer Session Bar with Prominent Logout & Administration Quick Switch */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 sm:px-5 sm:py-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
         <div className="flex items-start sm:items-center gap-3 min-w-0">
           <div className="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-950/70 border border-indigo-200 dark:border-indigo-800/60 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5 sm:mt-0">
-            <User className="w-4 h-4" />
+            {isAdmin ? <ShieldCheck className="w-4 h-4 text-indigo-600 dark:text-indigo-400" /> : <User className="w-4 h-4" />}
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
@@ -133,14 +237,37 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
                 Active QA Session
               </span>
+              {isAdmin && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+                  <Shield className="w-2.5 h-2.5" />
+                  Administrator
+                </span>
+              )}
             </div>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-1 sm:line-clamp-none">
-              {currentUser === 'jit_mondal' ? 'QA Automation Engineer' : 'Lead Quality Engineer'} · Enterprise QA Dashboard Access
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-1 sm:line-clamp-none font-medium">
+              {currentUser === 'sahil_roy'
+                ? 'System Administrator · Full Access to Team & Project Governance'
+                : currentUser === 'jit_mondal'
+                  ? 'QA Automation Engineer · Enterprise QA Dashboard Access'
+                  : 'QA Engineer · Enterprise QA Dashboard Access'}
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto pt-2 sm:pt-0 border-t border-slate-100 dark:border-slate-800 sm:border-0">
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto pt-2 sm:pt-0 border-t border-slate-100 dark:border-slate-800 sm:border-0">
+          {/* Administration Button on Home Page Dashboard - exclusively for Sahil Roy */}
+          {isAdmin && onNavigateToAdmin && (
+            <button
+              onClick={onNavigateToAdmin}
+              className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition cursor-pointer shadow-xs hover:shadow group"
+              title="Open Administration View (Manage engineers, permissions, projects)"
+              aria-label="Switch to Administration"
+            >
+              <ShieldCheck className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
+              <span>Administration</span>
+            </button>
+          )}
+
           {onChangePassword && (
             <button
               onClick={onChangePassword}
@@ -166,6 +293,41 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           )}
         </div>
       </div>
+
+      {/* Administration Hub Feature Banner - shown on Home Page Dashboard only if user is Sahil Roy */}
+      {isAdmin && onNavigateToAdmin && (
+        <div className="rounded-2xl p-4 sm:p-5 bg-gradient-to-r from-indigo-900 via-slate-900 to-indigo-950 border border-indigo-700/50 shadow-md text-white flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-start gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center text-indigo-300 shrink-0 mt-0.5">
+              <ShieldCheck className="w-5 h-5 text-indigo-300" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-500/30 text-indigo-200 border border-indigo-400/30 uppercase tracking-wider">
+                  Admin Exclusive Access
+                </span>
+                <span className="text-xs text-indigo-200 font-medium">Logged in as Sahil Roy</span>
+              </div>
+              <h3 className="text-base font-bold text-white mt-1">
+                Administration &amp; Team Governance Dashboard
+              </h3>
+              <p className="text-xs text-slate-300 mt-0.5 max-w-2xl">
+                Configure QA permissions, provision and register new QA engineers, assign projects, or access exclusive project details &amp; test suite parameters.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={onNavigateToAdmin}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white hover:bg-slate-100 text-indigo-950 font-bold text-xs transition shadow-sm cursor-pointer"
+            >
+              <span>Switch to Administration View</span>
+              <ArrowRight className="w-4 h-4 text-indigo-700" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Test Execution Status Report Banner */}
       <div className="bg-white dark:bg-gradient-to-r dark:from-slate-900 dark:via-slate-800 dark:to-indigo-950/70 rounded-2xl p-4 sm:p-6 border border-slate-200 dark:border-slate-800 shadow-sm dark:shadow-xl relative overflow-hidden transition-colors">
@@ -341,7 +503,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <span className="text-3xl font-extrabold text-slate-700 dark:text-slate-300 font-mono">
               {stats.pending}
             </span>
-            <span className="text-xs text-slate-500 dark:text-slate-400">queued</span>
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+              ({stats.pendingRate}%)
+            </span>
           </div>
           <div className="mt-2 text-xs text-slate-500 dark:text-slate-400">
             Ready to execute
@@ -405,10 +569,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               {/* Inner Center Metric */}
               <div className="absolute flex flex-col items-center pointer-events-none">
                 <span className="text-2xl font-black text-slate-900 dark:text-white font-mono">
-                  {stats.passRate}%
+                  {stats.totalExecuted > 0 ? `${stats.passRate}%` : '0%'}
                 </span>
                 <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                  Passed
+                  {stats.totalExecuted > 0 ? 'Passed' : 'Empty'}
                 </span>
               </div>
             </div>
@@ -454,7 +618,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 </div>
                 <div className="text-right">
                   <span className="text-sm font-bold text-slate-700 dark:text-slate-300 font-mono">{stats.pending}</span>
-                  <span className="text-[11px] text-slate-500 dark:text-slate-400 ml-1.5">(0%)</span>
+                  <span className="text-[11px] text-slate-500 dark:text-slate-400 ml-1.5">({stats.pendingRate}%)</span>
                 </div>
               </div>
             </div>
@@ -538,13 +702,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   Active Blocker Defect
                 </h3>
                 <span className="text-xs text-rose-600 dark:text-rose-400 font-mono block truncate">
-                  BUG-101 (Critical Severity / P1)
+                  {criticalDefects.length > 0 ? `${criticalDefects[0].bugId} (${criticalDefects[0].severity} Severity)` : 'No active blocker defects'}
                 </span>
               </div>
             </div>
-            <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-50 dark:bg-rose-500/20 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-500/30 whitespace-nowrap shrink-0">
-              Open &amp; Blocking
-            </span>
+            {criticalDefects.length > 0 && (
+              <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-50 dark:bg-rose-500/20 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-500/30 whitespace-nowrap shrink-0">
+                {criticalDefects[0].defectStatus}
+              </span>
+            )}
           </div>
 
           {criticalDefects.length > 0 ? (
@@ -645,7 +811,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
       </div>
 
-      {/* Project Metadata Card */}
+      {/* Project Metadata Card: Only showcase the project the user is assigned to and QA members without designations */}
       <div className="bg-white dark:bg-slate-800/80 rounded-2xl p-6 border border-slate-200 dark:border-slate-700/60 shadow-xs dark:shadow-lg transition-colors">
         <div className="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-700/60 mb-5">
           <div className="flex items-center gap-3">
@@ -668,18 +834,35 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
               Project Name
             </span>
-            <div className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <span>{projectMeta.projectName}</span>
-            </div>
-            {projectMeta.projectLink && (
-              <a 
-                href={projectMeta.projectLink} 
-                target="_blank" 
-                rel="noreferrer"
-                className="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-medium inline-flex items-center gap-1 mt-1"
-              >
-                Open Project Link <ExternalLink className="w-3 h-3" />
-              </a>
+            {isUserAssignedToProject ? (
+              <>
+                <div className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <span>{projectMeta.projectName}</span>
+                </div>
+                {projectMeta.projectLink && (
+                  <a 
+                    href={projectMeta.projectLink} 
+                    target="_blank" 
+                    rel="noreferrer"
+                    className="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-medium inline-flex items-center gap-1 mt-1"
+                  >
+                    Open Project Link <ExternalLink className="w-3 h-3" />
+                  </a>
+                )}
+              </>
+            ) : userAssignedProjects.length > 0 ? (
+              <div className="space-y-1">
+                <div className="text-sm font-bold text-slate-900 dark:text-white">
+                  {userAssignedProjects.join(', ')}
+                </div>
+                <div className="text-[11px] text-amber-600 dark:text-amber-400">
+                  User assigned project scope
+                </div>
+              </div>
+            ) : (
+              <div className="text-xs text-slate-400 italic">
+                No active project assigned to this account
+              </div>
             )}
           </div>
 
@@ -687,10 +870,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
               Execution Schedule
             </span>
-            <div className="text-slate-700 dark:text-slate-200 font-mono text-xs space-y-0.5">
-              <div><strong className="text-slate-500 dark:text-slate-400 font-sans">Start:</strong> {projectMeta.estimatedStartDate}</div>
-              <div><strong className="text-slate-500 dark:text-slate-400 font-sans">End:</strong> {projectMeta.estimatedEndDate}</div>
-            </div>
+            {isUserAssignedToProject ? (
+              <div className="text-slate-700 dark:text-slate-200 font-mono text-xs space-y-0.5">
+                <div><strong className="text-slate-500 dark:text-slate-400 font-sans">Start:</strong> {projectMeta.estimatedStartDate}</div>
+                <div><strong className="text-slate-500 dark:text-slate-400 font-sans">End:</strong> {projectMeta.estimatedEndDate}</div>
+              </div>
+            ) : (
+              <div className="text-xs text-slate-400 italic">
+                Schedule scoped to active project
+              </div>
+            )}
           </div>
 
           <div className="space-y-1">
@@ -698,14 +887,20 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               Assigned QA Members
             </span>
             <div className="flex flex-wrap gap-1.5 mt-1">
-              {projectMeta.assignedQAMembers.map((member, i) => (
-                <span 
-                  key={i}
-                  className="px-2 py-0.5 rounded-md text-xs bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-medium"
-                >
-                  {member}
+              {assignedQAMembersForThisProject.length > 0 ? (
+                assignedQAMembersForThisProject.map((member, i) => (
+                  <span 
+                    key={i}
+                    className="px-2.5 py-1 rounded-lg text-xs bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-medium"
+                  >
+                    {member}
+                  </span>
+                ))
+              ) : (
+                <span className="text-xs text-slate-400 italic">
+                  No QA members assigned
                 </span>
-              ))}
+              )}
             </div>
           </div>
         </div>

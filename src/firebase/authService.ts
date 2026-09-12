@@ -3,6 +3,7 @@ import {
   getDoc, 
   setDoc, 
   updateDoc, 
+  deleteDoc,
   collection, 
   getDocs 
 } from 'firebase/firestore';
@@ -17,28 +18,68 @@ export const DEFAULT_USERS: Record<string, QAUser> = {
   sahil_roy: {
     username: 'sahil_roy',
     name: 'Sahil Roy',
-    role: 'Lead QA Engineer',
+    role: 'Administrator',
+    email: 'roysahil579@gmail.com',
     password: 'Illusio@006574',
+    assignedProjects: ['Enterprise Core HR Portal', 'Sprint 24 - Regression Suite'],
+    permissions: {
+      canDeleteDefects: true,
+      canEditAllDefects: true,
+      canCleanDatabase: true
+    },
+    status: 'active',
     createdAt: new Date().toISOString()
   },
   jit_mondal: {
     username: 'jit_mondal',
     name: 'Jeet Mondal',
     role: 'QA Engineer',
+    email: 'jeet.mondal@illusio.tech',
     password: 'Illusio@006574',
+    assignedProjects: ['Enterprise Core HR Portal'],
+    permissions: {
+      canDeleteDefects: false,
+      canEditAllDefects: false,
+      canCleanDatabase: false
+    },
+    status: 'active',
     createdAt: new Date().toISOString()
   }
 };
 
 /**
- * Retrieve local cached users
+ * Retrieve local cached users and purge unwanted entries
  */
 function getLocalUsers(): Record<string, QAUser> {
   try {
     const raw = localStorage.getItem(LOCAL_STORAGE_USERS_KEY);
     if (!raw) return { ...DEFAULT_USERS };
-    const parsed = JSON.parse(raw);
-    return { ...DEFAULT_USERS, ...parsed };
+    const parsed = JSON.parse(raw) as Record<string, QAUser>;
+    const merged: Record<string, QAUser> = { ...DEFAULT_USERS, ...parsed };
+    
+    // Proactively purge Alex Morgan and Priya Sharma
+    delete merged['alex_morgan'];
+    delete merged['alex'];
+    delete merged['priya_sharma'];
+    delete merged['priya'];
+    Object.keys(merged).forEach(key => {
+      const u = merged[key];
+      const name = (u?.name || '').toLowerCase();
+      const uname = (u?.username || key || '').toLowerCase();
+      if (
+        name.includes('alex morgan') || 
+        uname === 'alex_morgan' || 
+        uname === 'alex' ||
+        name.includes('priya sharma') ||
+        name.includes('priya') ||
+        uname === 'priya_sharma' ||
+        uname === 'priya'
+      ) {
+        delete merged[key];
+      }
+    });
+
+    return merged;
   } catch {
     return { ...DEFAULT_USERS };
   }
@@ -66,10 +107,20 @@ function saveLocalUsers(users: Record<string, QAUser>): void {
 }
 
 /**
- * Seed initial users in Firestore if missing
+ * Seed initial users in Firestore if missing and purge removed users
  */
 export async function seedUsersIfEmpty(): Promise<void> {
   try {
+    // Proactively purge Alex Morgan and Priya Sharma docs if present
+    try {
+      await deleteDoc(doc(db, USERS_COLLECTION, 'alex_morgan'));
+      await deleteDoc(doc(db, USERS_COLLECTION, 'alex'));
+      await deleteDoc(doc(db, USERS_COLLECTION, 'priya_sharma'));
+      await deleteDoc(doc(db, USERS_COLLECTION, 'priya'));
+    } catch {
+      // Ignore if not exists
+    }
+
     for (const [uname, user] of Object.entries(DEFAULT_USERS)) {
       const userRef = doc(db, USERS_COLLECTION, uname);
       const snap = await getDoc(userRef);
@@ -145,17 +196,25 @@ export async function validateCredentials(
 }
 
 /**
- * Register a brand new QA user
+ * Register a brand new QA user (Admin only)
  */
 export async function registerQAUser(params: {
   username: string;
   name: string;
   role: string;
+  email?: string;
   password: string;
+  assignedProjects?: string[];
+  permissions?: {
+    canDeleteDefects?: boolean;
+    canEditAllDefects?: boolean;
+    canCleanDatabase?: boolean;
+  };
 }): Promise<{ success: boolean; user?: QAUser; error?: string }> {
   const cleanUsername = params.username.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
   const cleanName = params.name.trim();
   const cleanRole = params.role.trim() || 'QA Engineer';
+  const cleanEmail = params.email?.trim() || `${cleanUsername}@illusio.tech`;
   const cleanPassword = params.password;
 
   if (!cleanUsername || cleanUsername.length < 3) {
@@ -163,7 +222,7 @@ export async function registerQAUser(params: {
   }
 
   if (!cleanName || cleanName.length < 2) {
-    return { success: false, error: 'Please provide your full display name.' };
+    return { success: false, error: 'Please provide the full display name.' };
   }
 
   if (!cleanPassword || cleanPassword.length < 4) {
@@ -181,7 +240,7 @@ export async function registerQAUser(params: {
     const userRef = doc(db, USERS_COLLECTION, cleanUsername);
     const snap = await getDoc(userRef);
     if (snap.exists()) {
-      return { success: false, error: `Username '@${cleanUsername}' is already taken in Firestore. Please choose another.` };
+      return { success: false, error: `Username '@${cleanUsername}' is already registered in Firestore. Please choose another.` };
     }
   } catch (err) {
     console.warn('Firestore user uniqueness check warning:', err);
@@ -191,7 +250,15 @@ export async function registerQAUser(params: {
     username: cleanUsername,
     name: cleanName,
     role: cleanRole,
+    email: cleanEmail,
     password: cleanPassword,
+    assignedProjects: params.assignedProjects || ['Enterprise Core HR Portal'],
+    permissions: params.permissions || {
+      canDeleteDefects: false,
+      canEditAllDefects: false,
+      canCleanDatabase: false
+    },
+    status: 'active',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
@@ -209,6 +276,116 @@ export async function registerQAUser(params: {
   }
 
   return { success: true, user: newUser };
+}
+
+/**
+ * Fetch all registered QA team members & engineers
+ */
+export async function getAllQAUsers(): Promise<QAUser[]> {
+  const localUsers = getLocalUsers();
+
+  try {
+    const usersCol = collection(db, USERS_COLLECTION);
+    const snapshot = await getDocs(usersCol);
+    if (!snapshot.empty) {
+      snapshot.docs.forEach(docSnap => {
+        const data = docSnap.data() as QAUser;
+        const uId = (data.username || docSnap.id).toLowerCase();
+        const uName = (data.name || '').toLowerCase();
+        // Purge Alex Morgan, Priya Sharma, or inactive users if found
+        if (
+          uId === 'alex_morgan' || 
+          uId === 'alex' || 
+          uName.includes('alex morgan') ||
+          uId === 'priya_sharma' || 
+          uId === 'priya' || 
+          uName.includes('priya sharma') ||
+          uName.includes('priya')
+        ) {
+          deleteDoc(docSnap.ref).catch(() => {});
+          delete localUsers[uId];
+          return;
+        }
+        if (data && data.username && data.status !== 'inactive') {
+          localUsers[data.username.toLowerCase()] = {
+            ...localUsers[data.username.toLowerCase()],
+            ...data
+          };
+        }
+      });
+      saveLocalUsers(localUsers);
+    }
+  } catch (err) {
+    console.warn('Could not fetch all users from Firestore, using local cache:', err);
+  }
+
+  return Object.values(localUsers).filter(
+    u => u.status !== 'inactive' &&
+         u.username.toLowerCase() !== 'alex_morgan' &&
+         u.username.toLowerCase() !== 'alex' &&
+         !u.name.toLowerCase().includes('alex morgan') &&
+         u.username.toLowerCase() !== 'priya_sharma' &&
+         u.username.toLowerCase() !== 'priya' &&
+         !u.name.toLowerCase().includes('priya sharma') &&
+         !u.name.toLowerCase().includes('priya')
+  );
+}
+
+/**
+ * Update an existing QA user's profile, role, permissions, or projects
+ */
+export async function updateQAUser(
+  username: string, 
+  updates: Partial<QAUser>
+): Promise<{ success: boolean; error?: string; user?: QAUser }> {
+  const cleanUsername = username.trim().toLowerCase();
+  const localUsers = getLocalUsers();
+  const existing = localUsers[cleanUsername] || (await getQAUser(cleanUsername));
+
+  if (!existing) {
+    return { success: false, error: `User '@${cleanUsername}' not found.` };
+  }
+
+  const updated: QAUser = {
+    ...existing,
+    ...updates,
+    updatedAt: new Date().toISOString()
+  };
+
+  localUsers[cleanUsername] = updated;
+  saveLocalUsers(localUsers);
+
+  try {
+    const userRef = doc(db, USERS_COLLECTION, cleanUsername);
+    await setDoc(userRef, updated, { merge: true });
+  } catch (err) {
+    console.warn('Failed to update user in Firestore, saved locally:', err);
+  }
+
+  return { success: true, user: updated };
+}
+
+/**
+ * Remove an engineer account (Admin action)
+ */
+export async function deleteQAUser(username: string): Promise<{ success: boolean; error?: string }> {
+  const cleanUsername = username.trim().toLowerCase();
+  if (cleanUsername === 'sahil_roy') {
+    return { success: false, error: 'Cannot delete primary Administrator account (Sahil Roy).' };
+  }
+
+  const localUsers = getLocalUsers();
+  delete localUsers[cleanUsername];
+  saveLocalUsers(localUsers);
+
+  try {
+    const userRef = doc(db, USERS_COLLECTION, cleanUsername);
+    await deleteDoc(userRef);
+  } catch (err) {
+    console.warn('Failed to delete user in Firestore:', err);
+  }
+
+  return { success: true };
 }
 
 /**
@@ -266,3 +443,4 @@ export async function changeUserPassword(params: {
 
   return { success: true };
 }
+

@@ -12,16 +12,13 @@ import {
   FlaskConical,
   Activity,
   CheckCircle2,
-  UserPlus,
   KeyRound,
-  BadgeCheck,
-  Briefcase,
   Loader2,
-  ArrowLeft
+  ArrowLeft,
+  Shield
 } from 'lucide-react';
 import { 
   validateCredentials, 
-  registerQAUser, 
   changeUserPassword 
 } from '../firebase/authService.ts';
 
@@ -29,7 +26,7 @@ interface LoginPageProps {
   onLoginSuccess: (username: string) => void;
 }
 
-type AuthMode = 'signin' | 'signup' | 'change_password';
+type AuthMode = 'signin' | 'change_password';
 
 export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
   const [mode, setMode] = useState<AuthMode>('signin');
@@ -38,14 +35,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-
-  // Sign Up state
-  const [signupName, setSignupName] = useState('');
-  const [signupUsername, setSignupUsername] = useState('');
-  const [signupRole, setSignupRole] = useState('QA Engineer');
-  const [signupPassword, setSignupPassword] = useState('');
-  const [signupConfirmPassword, setSignupConfirmPassword] = useState('');
-  const [showSignupPassword, setShowSignupPassword] = useState(false);
 
   // Change Password state
   const [changeUsername, setChangeUsername] = useState('');
@@ -104,61 +93,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     }
   };
 
-  // 2. Handle Sign Up
-  const handleSignUp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setSuccessNotice(null);
-
-    const cleanUsername = signupUsername.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
-
-    if (!signupName.trim()) {
-      setError('Please provide your full display name.');
-      return;
-    }
-    if (!cleanUsername || cleanUsername.length < 3) {
-      setError('QA Username must be at least 3 alphanumeric characters (underscores allowed).');
-      return;
-    }
-    if (signupPassword.length < 4) {
-      setError('Password must be at least 4 characters.');
-      return;
-    }
-    if (signupPassword !== signupConfirmPassword) {
-      setError('Passwords do not match. Please verify.');
-      return;
-    }
-
-    setIsSubmitting(true);
-
-    try {
-      const result = await registerQAUser({
-        name: signupName.trim(),
-        username: cleanUsername,
-        role: signupRole,
-        password: signupPassword
-      });
-
-      if (!result.success) {
-        setIsSubmitting(false);
-        setError(result.error || 'Registration failed.');
-        return;
-      }
-
-      setSuccessNotice(`QA Account @${cleanUsername} registered successfully! Launching test workspace...`);
-      setIsSubmitting(false);
-
-      // Auto login
-      setTimeout(() => {
-        onLoginSuccess(cleanUsername);
-      }, 1200);
-    } catch {
-      setIsSubmitting(false);
-      setError('Registration error. Please check connection and try again.');
-    }
-  };
-
-  // 3. Handle Change Password from Login
+  // 2. Handle Change Password from Login
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -250,7 +185,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
             SYSTEM ONLINE
           </span>
           <span className="hidden sm:inline-block text-[11px] font-mono text-slate-400">
-            v4.2.1 (Rev. 1410)
+            v5.0.0 (Rev. 2500)
           </span>
         </div>
       </header>
@@ -267,38 +202,15 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
             <div className="mt-2 text-center">
               <p className="text-xs text-slate-400">
                 {mode === 'signin' && 'Sign in to access QA test executions and live defect tracking.'}
-                {mode === 'signup' && 'Create your authorized QA engineer credentials.'}
                 {mode === 'change_password' && 'Update security password for your QA engineer profile.'}
               </p>
             </div>
           </div>
 
-          {/* Mode Switcher Tabs */}
-          <div className="grid grid-cols-2 p-1 bg-slate-950/80 border border-slate-800 rounded-xl mb-5 text-xs font-semibold">
-            <button
-              type="button"
-              onClick={() => switchMode('signin')}
-              className={`py-2 rounded-lg transition cursor-pointer flex items-center justify-center gap-1.5 ${
-                mode === 'signin'
-                  ? 'bg-indigo-600 text-white shadow-xs'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <Lock className="w-3.5 h-3.5" />
-              <span>Sign In</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => switchMode('signup')}
-              className={`py-2 rounded-lg transition cursor-pointer flex items-center justify-center gap-1.5 ${
-                mode === 'signup'
-                  ? 'bg-indigo-600 text-white shadow-xs'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <UserPlus className="w-3.5 h-3.5" />
-              <span>New QA Sign Up</span>
-            </button>
+          {/* Secure Access Badge */}
+          <div className="flex items-center justify-center gap-1.5 py-1.5 px-3 mb-5 rounded-xl bg-slate-950/70 border border-slate-800/80 text-[11px] text-slate-400 font-medium">
+            <Shield className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+            <span>Authorized Team Access · Managed by Sahil Roy</span>
           </div>
 
           {/* Error Notice */}
@@ -410,162 +322,15 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                 )}
               </button>
 
-              <div className="pt-2 text-center text-xs text-slate-400">
-                <span>Need a team account? </span>
-                <button
-                  type="button"
-                  onClick={() => switchMode('signup')}
-                  className="text-indigo-400 hover:text-indigo-300 font-semibold underline underline-offset-2 transition cursor-pointer"
-                >
-                  Create QA Account
-                </button>
+              <div className="pt-2 text-center text-[11px] text-slate-500 leading-relaxed">
+                <span>Need a QA account? Contact QA Administrator (</span>
+                <span className="font-semibold text-indigo-400">Sahil Roy</span>
+                <span>) for registration and project assignment.</span>
               </div>
             </form>
           )}
 
-          {/* ================= MODE 2: SIGN UP ================= */}
-          {mode === 'signup' && (
-            <form onSubmit={handleSignUp} className="space-y-3.5 animate-in fade-in duration-150">
-              <div className="space-y-1">
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
-                  Full Name *
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                    <BadgeCheck className="w-4 h-4" />
-                  </div>
-                  <input
-                    type="text"
-                    value={signupName}
-                    onChange={(e) => setSignupName(e.target.value)}
-                    placeholder="e.g. Sahil Roy"
-                    className="w-full pl-10 pr-4 py-2.5 bg-slate-950/80 border border-slate-700/80 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 rounded-xl text-sm text-white placeholder-slate-500 transition outline-none"
-                    required
-                    autoFocus
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
-                  QA Username Handle *
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                    <User className="w-4 h-4" />
-                  </div>
-                  <input
-                    type="text"
-                    value={signupUsername}
-                    onChange={(e) => setSignupUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
-                    placeholder="e.g. sahil_roy"
-                    className="w-full pl-10 pr-4 py-2.5 bg-slate-950/80 border border-slate-700/80 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 rounded-xl text-sm text-white placeholder-slate-500 transition outline-none font-mono"
-                    required
-                  />
-                </div>
-                <p className="text-[10px] text-slate-500">Lowercase letters, numbers, and underscores only</p>
-              </div>
-
-              <div className="space-y-1">
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
-                  QA Role *
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                    <Briefcase className="w-4 h-4" />
-                  </div>
-                  <select
-                    value={signupRole}
-                    onChange={(e) => setSignupRole(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 bg-slate-950/80 border border-slate-700/80 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 rounded-xl text-sm text-white transition outline-none cursor-pointer"
-                  >
-                    <option value="Lead QA Engineer">Lead QA Engineer</option>
-                    <option value="QA Automation Engineer">QA Automation Engineer</option>
-                    <option value="QA Engineer">QA Engineer</option>
-                    <option value="SDET (Software Development Engineer in Test)">SDET</option>
-                    <option value="Performance &amp; Security QA">Performance &amp; Security QA</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
-                  Password *
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                    <Lock className="w-4 h-4" />
-                  </div>
-                  <input
-                    type={showSignupPassword ? 'text' : 'password'}
-                    value={signupPassword}
-                    onChange={(e) => setSignupPassword(e.target.value)}
-                    placeholder="Minimum 4 characters"
-                    className="w-full pl-10 pr-10 py-2.5 bg-slate-950/80 border border-slate-700/80 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 rounded-xl text-sm text-white placeholder-slate-500 transition outline-none font-mono"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowSignupPassword(!showSignupPassword)}
-                    className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-200 transition"
-                  >
-                    {showSignupPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
-                  Confirm Password *
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                    <Lock className="w-4 h-4" />
-                  </div>
-                  <input
-                    type={showSignupPassword ? 'text' : 'password'}
-                    value={signupConfirmPassword}
-                    onChange={(e) => setSignupConfirmPassword(e.target.value)}
-                    placeholder="Re-enter password"
-                    className="w-full pl-10 pr-4 py-2.5 bg-slate-950/80 border border-slate-700/80 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 rounded-xl text-sm text-white placeholder-slate-500 transition outline-none font-mono"
-                    required
-                  />
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full mt-2 py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-semibold text-sm shadow-lg shadow-emerald-600/25 transition flex items-center justify-center gap-2 group cursor-pointer disabled:opacity-50"
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin text-emerald-200" />
-                    <span>Registering Account...</span>
-                  </>
-                ) : (
-                  <>
-                    <UserPlus className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                    <span>Create QA Account</span>
-                    <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-                  </>
-                )}
-              </button>
-
-              <div className="pt-2 text-center text-xs text-slate-400">
-                <span>Already have credentials? </span>
-                <button
-                  type="button"
-                  onClick={() => switchMode('signin')}
-                  className="text-indigo-400 hover:text-indigo-300 font-semibold underline underline-offset-2 transition cursor-pointer"
-                >
-                  Sign in here
-                </button>
-              </div>
-            </form>
-          )}
-
-          {/* ================= MODE 3: CHANGE / RESET PASSWORD ================= */}
+          {/* ================= MODE 2: CHANGE / RESET PASSWORD ================= */}
           {mode === 'change_password' && (
             <form onSubmit={handleChangePassword} className="space-y-3.5 animate-in fade-in duration-150">
               <div className="flex items-center justify-between pb-1 border-b border-slate-800">
@@ -711,8 +476,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
 
       {/* Footer */}
       <footer className="relative z-10 w-full text-center py-4 text-xs text-slate-500">
-        <p>© {new Date().getFullYear()} Illusio Tech · Illusion_Dashboard v4.2.1 (Rev. 1410)</p>
+        <p>© {new Date().getFullYear()} Illusio Tech · Illusion_Dashboard v5.0.0 (Rev. 2500)</p>
       </footer>
     </div>
   );
 };
+

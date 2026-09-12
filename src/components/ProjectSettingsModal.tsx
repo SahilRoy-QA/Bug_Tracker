@@ -10,22 +10,27 @@ import {
   Loader2 
 } from 'lucide-react';
 import { ProjectMeta } from '../types.ts';
+import { canUserCleanDatabase } from '../utils/permissions.ts';
 
 interface ProjectSettingsViewProps {
   projectMeta: ProjectMeta;
   onSaveMeta: (updated: Partial<ProjectMeta>) => Promise<void>;
   onResetTemplate: () => void;
+  currentUser?: string;
 }
 
 export const ProjectSettingsView: React.FC<ProjectSettingsViewProps> = ({
   projectMeta,
   onSaveMeta,
-  onResetTemplate
+  onResetTemplate,
+  currentUser = 'sahil_roy'
 }) => {
   const [formData, setFormData] = useState<ProjectMeta>({ ...projectMeta });
   const [newMember, setNewMember] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
+
+  const canCleanDb = canUserCleanDatabase(currentUser);
 
   const handleAddMember = () => {
     if (newMember.trim()) {
@@ -221,13 +226,17 @@ export const ProjectSettingsView: React.FC<ProjectSettingsViewProps> = ({
 
           {/* Submit / Reset Actions */}
           <div className="pt-4 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between">
-            <button
-              type="button"
-              onClick={onResetTemplate}
-              className="text-xs text-rose-600 hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300 font-medium"
-            >
-              Reset All to Original Template
-            </button>
+            {canCleanDb ? (
+              <button
+                type="button"
+                onClick={onResetTemplate}
+                className="text-xs text-rose-600 hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300 font-medium"
+              >
+                Reset All to Original Template
+              </button>
+            ) : (
+              <div />
+            )}
 
             <button
               type="submit"

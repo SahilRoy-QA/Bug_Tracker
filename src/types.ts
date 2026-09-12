@@ -18,6 +18,8 @@ export interface DefectItem {
   priority: DefectPriority;
   assignedTo: string;
   reportedBy: string;
+  reportedByUsername?: string;
+  createdBy?: string;
   environment: string;
   stepsToReproduce?: string;
   expectedResult?: string;
@@ -50,13 +52,24 @@ export interface ExecutionReportStats {
   passRate: number;
   failRate: number;
   blockedRate: number;
+  pendingRate: number;
+}
+
+export interface UserPermissions {
+  canDeleteDefects?: boolean;
+  canEditAllDefects?: boolean;
+  canCleanDatabase?: boolean;
 }
 
 export interface QAUser {
   username: string;
   name: string;
   role: string;
+  email?: string;
   password?: string;
+  assignedProjects?: string[];
+  permissions?: UserPermissions;
+  status?: 'active' | 'inactive';
   createdAt?: string;
   updatedAt?: string;
 }

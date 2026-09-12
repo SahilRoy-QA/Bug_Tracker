@@ -8,22 +8,35 @@ const STORAGE_KEYS = {
 };
 
 /**
- * Load defects from local storage with fallback to initial QA seed data
+ * Load defects from local storage with fallback to initial QA seed data (empty by default)
  */
 export function loadStoredDefects(): DefectItem[] {
-  if (typeof window === 'undefined') return initialDefects;
+  if (typeof window === 'undefined') return [];
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.DEFECTS);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
+      if (Array.isArray(parsed)) {
         return parsed;
       }
     }
   } catch (err) {
     console.warn('Could not read defects from localStorage:', err);
   }
-  return initialDefects;
+  return [];
+}
+
+/**
+ * Clear all defects from local storage
+ */
+export function clearStoredDefects(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(STORAGE_KEYS.DEFECTS, JSON.stringify([]));
+    localStorage.setItem(STORAGE_KEYS.LAST_SYNC, new Date().toISOString());
+  } catch (err) {
+    console.error('Could not clear defects in localStorage:', err);
+  }
 }
 
 /**

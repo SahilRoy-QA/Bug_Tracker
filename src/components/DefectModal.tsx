@@ -7,7 +7,9 @@ import {
   FileText,
   Loader2,
   Check,
-  Trash2
+  Trash2,
+  Lock,
+  ShieldAlert
 } from 'lucide-react';
 import { 
   DefectItem, 
@@ -16,6 +18,10 @@ import {
   DefectSeverity, 
   DefectPriority 
 } from '../types.ts';
+import { 
+  canUserEditDefect, 
+  canUserDeleteDefect 
+} from '../utils/permissions.ts';
 
 interface DefectModalProps {
   defect: DefectItem | null; // null means create new
@@ -25,6 +31,7 @@ interface DefectModalProps {
   onDelete?: (id: string) => Promise<void>;
   defaultModule?: string;
   totalExisting: number;
+  currentUser?: string;
 }
 
 export const DefectModal: React.FC<DefectModalProps> = ({
@@ -34,7 +41,8 @@ export const DefectModal: React.FC<DefectModalProps> = ({
   onSave,
   onDelete,
   defaultModule = 'Admin',
-  totalExisting
+  totalExisting,
+  currentUser = 'sahil_roy'
 }) => {
   const [formData, setFormData] = useState<Partial<DefectItem>>({});
   const [isSaving, setIsSaving] = useState(false);
@@ -44,6 +52,9 @@ export const DefectModal: React.FC<DefectModalProps> = ({
   const [isAnalyzingAI, setIsAnalyzingAI] = useState(false);
   const [aiSuggestion, setAiSuggestion] = useState<any>(null);
 
+  const canEdit = canUserEditDefect(defect, currentUser);
+  const canDelete = canUserDeleteDefect(currentUser);
+
   useEffect(() => {
     setValidationError(null);
     setIsConfirmingDelete(false);
@@ -51,6 +62,13 @@ export const DefectModal: React.FC<DefectModalProps> = ({
       setFormData(defect);
     } else {
       const nextNum = totalExisting + 1;
+      const reporterDisplay = 
+        currentUser === 'sahil_roy' 
+          ? 'Sahil Roy (Lead QA)' 
+          : currentUser === 'jit_mondal' 
+          ? 'Jeet Mondal (QA Engineer)' 
+          : currentUser || 'QA Tester';
+
       setFormData({
         bugId: `BUG-${100 + nextNum}`,
         testCaseId: `TC-${String(nextNum).padStart(3, '0')}`,
@@ -61,7 +79,9 @@ export const DefectModal: React.FC<DefectModalProps> = ({
         severity: 'High',
         priority: 'P2 - High',
         assignedTo: 'Marcus Chen (Dev Lead)',
-        reportedBy: 'Sahil Roy (Lead QA)',
+        reportedBy: reporterDisplay,
+        reportedByUsername: currentUser,
+        createdBy: currentUser,
         environment: 'QA Staging - Chrome v126 / Ubuntu 24.04',
         stepsToReproduce: '1. Navigate to target module\n2. Perform test step\n3. Observe result',
         expectedResult: '',
@@ -71,12 +91,14 @@ export const DefectModal: React.FC<DefectModalProps> = ({
       });
     }
     setAiSuggestion(null);
-  }, [defect, isOpen, totalExisting, defaultModule]);
+  }, [defect, isOpen, totalExisting, defaultModule, currentUser]);
 
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canEdit) return;
+
     if (!formData.title?.trim()) {
       setValidationError('Please provide a Defect Summary / Title');
       return;
@@ -84,7 +106,11 @@ export const DefectModal: React.FC<DefectModalProps> = ({
     setValidationError(null);
     setIsSaving(true);
     try {
-      await onSave(formData);
+      await onSave({
+        ...formData,
+        reportedByUsername: formData.reportedByUsername || (defect ? defect.reportedByUsername : currentUser),
+        createdBy: formData.createdBy || (defect ? defect.createdBy : currentUser)
+      });
       onClose();
     } finally {
       setIsSaving(false);
@@ -92,7 +118,7 @@ export const DefectModal: React.FC<DefectModalProps> = ({
   };
 
   const handleDelete = async () => {
-    if (!defect?.id || !onDelete) return;
+    if (!defect?.id || !onDelete || !canDelete) return;
     setIsDeleting(true);
     try {
       await onDelete(defect.id);
@@ -183,12 +209,17 @@ export const DefectModal: React.FC<DefectModalProps> = ({
               <span className="px-2 py-0.5 rounded text-xs font-mono font-bold bg-indigo-500/10 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 dark:border-indigo-500/30">
                 {formData.bugId || 'NEW DEFECT'}
               </span>
-              <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-                {defect ? 'Edit Defect Record' : 'Log New Defect & Test Result'}
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                {!canEdit && defect && <Lock className="w-4 h-4 text-amber-500" />}
+                {defect 
+                  ? (canEdit ? 'Edit Defect Record' : 'View Defect Record (Read-Only)') 
+                  : 'Log New Defect & Test Result'}
               </h2>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Updates will persist to the backend Defect Tracker Sheet database
+              {canEdit 
+                ? 'Updates will persist to the backend Defect Tracker Sheet database'
+                : 'Viewing mode · You have read-only access to this defect record'}
             </p>
           </div>
 
@@ -199,6 +230,21 @@ export const DefectModal: React.FC<DefectModalProps> = ({
             <X className="w-5 h-5" />
           </button>
         </div>
+
+        {/* Read-only notification banner if user is not author and not admin */}
+        {defect && !canEdit && (
+          <div className="mx-6 mt-4 p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 rounded-xl flex items-start gap-2.5 text-xs text-amber-800 dark:text-amber-300">
+            <Lock className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+            <div className="space-y-0.5">
+              <p className="font-semibold text-slate-900 dark:text-white">
+                Read-Only Defect View
+              </p>
+              <p className="text-[11px] text-amber-700 dark:text-amber-300/90 leading-relaxed">
+                Logged by <span className="font-semibold">{defect.reportedBy || defect.reportedByUsername || 'QA Engineer'}</span>. Non-admin users can only edit defects they logged themselves. Administrator Sahil Roy can modify all submissions.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Modal Body / Form */}
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-5">
@@ -237,9 +283,10 @@ export const DefectModal: React.FC<DefectModalProps> = ({
               <input
                 type="text"
                 required
+                disabled={!canEdit}
                 value={formData.bugId || ''}
                 onChange={e => setFormData({ ...formData, bugId: e.target.value })}
-                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500"
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 disabled:opacity-70 disabled:cursor-not-allowed"
               />
             </div>
 
@@ -249,9 +296,10 @@ export const DefectModal: React.FC<DefectModalProps> = ({
               </label>
               <input
                 type="text"
+                disabled={!canEdit}
                 value={formData.testCaseId || ''}
                 onChange={e => setFormData({ ...formData, testCaseId: e.target.value })}
-                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500"
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 disabled:opacity-70 disabled:cursor-not-allowed"
               />
             </div>
 
@@ -262,10 +310,11 @@ export const DefectModal: React.FC<DefectModalProps> = ({
               <input
                 type="text"
                 required
+                disabled={!canEdit}
                 value={formData.module || ''}
                 onChange={e => setFormData({ ...formData, module: e.target.value })}
                 placeholder="e.g. Admin / Auth, PIM, Leave"
-                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500"
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 disabled:opacity-70 disabled:cursor-not-allowed"
               />
             </div>
           </div>
@@ -276,35 +325,38 @@ export const DefectModal: React.FC<DefectModalProps> = ({
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
                 Defect Title / Summary *
               </label>
-              <button
-                type="button"
-                onClick={handleAIAnalyze}
-                disabled={isAnalyzingAI || !formData.title}
-                className="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 dark:hover:text-indigo-300 transition"
-              >
-                {isAnalyzingAI ? (
-                  <>
-                    <Loader2 className="w-3 h-3 animate-spin" />
-                    <span>Analyzing...</span>
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-3 h-3" />
-                    <span>AI Triage Assistant</span>
-                  </>
-                )}
-              </button>
+              {canEdit && (
+                <button
+                  type="button"
+                  onClick={handleAIAnalyze}
+                  disabled={isAnalyzingAI || !formData.title}
+                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 dark:hover:text-indigo-300 transition"
+                >
+                  {isAnalyzingAI ? (
+                    <>
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                      <span>Analyzing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-3 h-3" />
+                      <span>AI Triage Assistant</span>
+                    </>
+                  )}
+                </button>
+              )}
             </div>
             <input
               type="text"
               required
+              disabled={!canEdit}
               value={formData.title || ''}
               onChange={e => {
                 setFormData({ ...formData, title: e.target.value });
                 if (validationError) setValidationError(null);
               }}
               placeholder="e.g. System throws 500 error when applying leave without mandatory reason field"
-              className={`w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border ${validationError ? 'border-rose-500 ring-1 ring-rose-500/30' : 'border-slate-200 dark:border-slate-700'} rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500`}
+              className={`w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border ${validationError ? 'border-rose-500 ring-1 ring-rose-500/30' : 'border-slate-200 dark:border-slate-700'} rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 disabled:opacity-70 disabled:cursor-not-allowed`}
             />
             {validationError && (
               <p className="text-[11px] text-rose-600 dark:text-rose-400 font-medium mt-1">
@@ -320,9 +372,10 @@ export const DefectModal: React.FC<DefectModalProps> = ({
                 Execution Status
               </label>
               <select
+                disabled={!canEdit}
                 value={formData.testExecutionStatus || 'Failed'}
                 onChange={e => setFormData({ ...formData, testExecutionStatus: e.target.value as TestExecutionStatus })}
-                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500"
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 disabled:opacity-70 disabled:cursor-not-allowed"
               >
                 <option value="Passed">Passed</option>
                 <option value="Failed">Failed</option>
@@ -336,9 +389,10 @@ export const DefectModal: React.FC<DefectModalProps> = ({
                 Defect Status
               </label>
               <select
+                disabled={!canEdit}
                 value={formData.defectStatus || 'Open'}
                 onChange={e => setFormData({ ...formData, defectStatus: e.target.value as DefectStatus })}
-                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500"
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 disabled:opacity-70 disabled:cursor-not-allowed"
               >
                 <option value="Open">Open</option>
                 <option value="In Progress">In Progress</option>
@@ -354,9 +408,10 @@ export const DefectModal: React.FC<DefectModalProps> = ({
                 Severity
               </label>
               <select
+                disabled={!canEdit}
                 value={formData.severity || 'High'}
                 onChange={e => setFormData({ ...formData, severity: e.target.value as DefectSeverity })}
-                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500"
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 disabled:opacity-70 disabled:cursor-not-allowed"
               >
                 <option value="Critical">Critical</option>
                 <option value="High">High</option>
@@ -370,9 +425,10 @@ export const DefectModal: React.FC<DefectModalProps> = ({
                 Priority
               </label>
               <select
+                disabled={!canEdit}
                 value={formData.priority || 'P2 - High'}
                 onChange={e => setFormData({ ...formData, priority: e.target.value as DefectPriority })}
-                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500"
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 disabled:opacity-70 disabled:cursor-not-allowed"
               >
                 <option value="P1 - Urgent">P1 - Urgent</option>
                 <option value="P2 - High">P2 - High</option>
@@ -390,9 +446,10 @@ export const DefectModal: React.FC<DefectModalProps> = ({
               </label>
               <input
                 type="text"
+                disabled={!canEdit}
                 value={formData.assignedTo || ''}
                 onChange={e => setFormData({ ...formData, assignedTo: e.target.value })}
-                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500"
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 disabled:opacity-70 disabled:cursor-not-allowed"
               />
             </div>
 
@@ -402,9 +459,10 @@ export const DefectModal: React.FC<DefectModalProps> = ({
               </label>
               <input
                 type="text"
+                disabled={!canEdit}
                 value={formData.reportedBy || ''}
                 onChange={e => setFormData({ ...formData, reportedBy: e.target.value })}
-                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500"
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 disabled:opacity-70 disabled:cursor-not-allowed"
               />
             </div>
 
@@ -414,9 +472,10 @@ export const DefectModal: React.FC<DefectModalProps> = ({
               </label>
               <input
                 type="text"
+                disabled={!canEdit}
                 value={formData.environment || ''}
                 onChange={e => setFormData({ ...formData, environment: e.target.value })}
-                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500"
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 disabled:opacity-70 disabled:cursor-not-allowed"
               />
             </div>
           </div>
@@ -428,10 +487,11 @@ export const DefectModal: React.FC<DefectModalProps> = ({
             </label>
             <textarea
               rows={3}
+              disabled={!canEdit}
               value={formData.stepsToReproduce || ''}
               onChange={e => setFormData({ ...formData, stepsToReproduce: e.target.value })}
               placeholder="1. Navigate to...\n2. Click on...\n3. Fill in..."
-              className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500"
+              className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 disabled:opacity-70 disabled:cursor-not-allowed"
             />
           </div>
 
@@ -443,10 +503,11 @@ export const DefectModal: React.FC<DefectModalProps> = ({
               </label>
               <textarea
                 rows={2}
+                disabled={!canEdit}
                 value={formData.expectedResult || ''}
                 onChange={e => setFormData({ ...formData, expectedResult: e.target.value })}
                 placeholder="What should have happened according to requirements"
-                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500 disabled:opacity-70 disabled:cursor-not-allowed"
               />
             </div>
 
@@ -456,10 +517,11 @@ export const DefectModal: React.FC<DefectModalProps> = ({
               </label>
               <textarea
                 rows={2}
+                disabled={!canEdit}
                 value={formData.actualResult || ''}
                 onChange={e => setFormData({ ...formData, actualResult: e.target.value })}
                 placeholder="What actually occurred (error codes, unexpected redirect, etc.)"
-                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:border-rose-500"
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:border-rose-500 disabled:opacity-70 disabled:cursor-not-allowed"
               />
             </div>
           </div>
@@ -467,8 +529,8 @@ export const DefectModal: React.FC<DefectModalProps> = ({
 
         {/* Modal Footer */}
         <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3 bg-slate-50/80 dark:bg-slate-800/40">
-          {/* Delete Action (only if editing existing defect) */}
-          {defect && onDelete ? (
+          {/* Delete Action (only if editing existing defect AND user has delete privileges - Sahil Roy only) */}
+          {defect && onDelete && canDelete ? (
             <div>
               {isConfirmingDelete ? (
                 <div className="flex items-center gap-2">
@@ -508,7 +570,7 @@ export const DefectModal: React.FC<DefectModalProps> = ({
                   onClick={() => setIsConfirmingDelete(true)}
                   disabled={isSaving || isDeleting}
                   className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-rose-200 dark:border-rose-900/40 transition"
-                  title="Permanently remove this defect"
+                  title="Permanently remove this defect (Admin only)"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                   <span>Delete Defect</span>
@@ -525,26 +587,28 @@ export const DefectModal: React.FC<DefectModalProps> = ({
               onClick={onClose}
               className="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition"
             >
-              Cancel
+              {canEdit ? 'Cancel' : 'Close'}
             </button>
 
-            <button
-              onClick={handleSubmit}
-              disabled={isSaving || isDeleting}
-              className="inline-flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-600/20 transition disabled:opacity-50"
-            >
-              {isSaving ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Saving to Database...</span>
-                </>
-              ) : (
-                <>
-                  <Save className="w-4 h-4" />
-                  <span>{defect ? 'Update Record' : 'Save to Defect Sheet'}</span>
-                </>
-              )}
-            </button>
+            {canEdit && (
+              <button
+                onClick={handleSubmit}
+                disabled={isSaving || isDeleting}
+                className="inline-flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-600/20 transition disabled:opacity-50"
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Saving to Database...</span>
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4" />
+                    <span>{defect ? 'Update Record' : 'Save to Defect Sheet'}</span>
+                  </>
+                )}
+              </button>
+            )}
           </div>
         </div>
       </div>

@@ -10,7 +10,7 @@ import {
 } from 'firebase/firestore';
 import { db } from './config.ts';
 import { DefectItem, ProjectMeta } from '../types.ts';
-import { initialDefects, initialProjectMeta } from '../data/initialData.ts';
+import { initialProjectMeta } from '../data/initialData.ts';
 
 const DEFECTS_COLLECTION = 'defects';
 const CONFIG_COLLECTION = 'config';
@@ -19,34 +19,22 @@ const PROJECT_DOC_ID = 'projectMeta';
 let hasAttemptedSeed = false;
 
 /**
- * Seeds initial defect records into Firestore if the collection is empty.
+ * Initializes project config in Firestore if not already present.
+ * Does NOT force demo defects so users start with a clean database from zero.
  */
 export async function seedInitialDataIfEmpty(): Promise<boolean> {
   if (hasAttemptedSeed) return false;
   hasAttemptedSeed = true;
 
   try {
-    const snapshot = await getDocs(collection(db, DEFECTS_COLLECTION));
+    const projRef = doc(db, CONFIG_COLLECTION, PROJECT_DOC_ID);
+    const snapshot = await getDocs(collection(db, CONFIG_COLLECTION));
     if (snapshot.empty) {
-      console.info('Seeding initial QA defects into Firebase Firestore...');
-      const batch = writeBatch(db);
-
-      // Add default project metadata
-      const projRef = doc(db, CONFIG_COLLECTION, PROJECT_DOC_ID);
-      batch.set(projRef, initialProjectMeta);
-
-      // Add default defect records
-      for (const item of initialDefects) {
-        const dRef = doc(db, DEFECTS_COLLECTION, item.id);
-        batch.set(dRef, item);
-      }
-
-      await batch.commit();
-      console.info('Successfully seeded initial QA data to Firestore');
+      await setDoc(projRef, initialProjectMeta);
       return true;
     }
   } catch (err) {
-    console.error('Error seeding initial Firestore data:', err);
+    console.warn('Initial Firestore project meta check:', err);
   }
   return false;
 }
@@ -62,12 +50,7 @@ export function subscribeToDefects(
 
   const unsubscribe = onSnapshot(
     defectsRef,
-    async (snapshot) => {
-      if (snapshot.empty && !hasAttemptedSeed) {
-        await seedInitialDataIfEmpty();
-        return;
-      }
-
+    (snapshot) => {
       const items: DefectItem[] = [];
       snapshot.forEach((d) => {
         const data = d.data() as DefectItem;
@@ -84,7 +67,7 @@ export function subscribeToDefects(
         if (dateB !== dateA) {
           return dateB.localeCompare(dateA);
         }
-        return b.bugId.localeCompare(a.bugId);
+        return (b.bugId || '').localeCompare(a.bugId || '');
       });
 
       onData(items);
@@ -107,13 +90,28 @@ export function subscribeToProjectMeta(
 ): () => void {
   const metaDocRef = doc(db, CONFIG_COLLECTION, PROJECT_DOC_ID);
 
+  const cleanMemberName = (name: string) => name.replace(/\s*\([^)]*\)/g, '').trim();
+
   const unsubscribe = onSnapshot(
     metaDocRef,
     (snapshot) => {
       if (snapshot.exists()) {
         const data = snapshot.data() as ProjectMeta;
-        if (data.version !== '4.2.1' || data.revision !== '1410') {
-          const updated = { ...data, version: '4.2.1', revision: '1410' };
+        const rawMembers = data.assignedQAMembers || [];
+        const cleanedMembers = rawMembers
+          .map(cleanMemberName)
+          .filter(
+            m => m && 
+                 !m.toLowerCase().includes('alex morgan') && 
+                 !m.toLowerCase().includes('alex') &&
+                 !m.toLowerCase().includes('priya sharma') &&
+                 !m.toLowerCase().includes('priya')
+          );
+
+        const needsClean = JSON.stringify(rawMembers) !== JSON.stringify(cleanedMembers);
+
+        if (needsClean) {
+          const updated = { ...data, assignedQAMembers: cleanedMembers };
           setDoc(metaDocRef, updated, { merge: true }).catch(console.warn);
           onData(updated);
         } else {
@@ -180,6 +178,23 @@ export async function bulkDeleteDefectsFromFirestore(ids: string[]): Promise<voi
 }
 
 /**
+ * Clear all defects from Firestore collection (start clean from zero).
+ */
+export async function clearAllDefectsInFirestore(): Promise<void> {
+  try {
+    const snapshot = await getDocs(collection(db, DEFECTS_COLLECTION));
+    if (snapshot.empty) return;
+    const batch = writeBatch(db);
+    snapshot.forEach((d) => {
+      batch.delete(d.ref);
+    });
+    await batch.commit();
+  } catch (err) {
+    console.error('Error clearing defects in Firestore:', err);
+  }
+}
+
+/**
  * Bulk import or upsert defects in Firestore.
  */
 export async function bulkUpsertDefectsToFirestore(defects: DefectItem[]): Promise<void> {
@@ -199,30 +214,29 @@ export async function updateProjectMetaInFirestore(
   updates: Partial<ProjectMeta>
 ): Promise<void> {
   const docRef = doc(db, CONFIG_COLLECTION, PROJECT_DOC_ID);
-  await setDoc(docRef, updates, { merge: true });
+  const cleanMemberName = (name: string) => name.replace(/\s*\([^)]*\)/g, '').trim();
+
+  const sanitized = { ...updates };
+  if (sanitized.assignedQAMembers) {
+    sanitized.assignedQAMembers = sanitized.assignedQAMembers
+      .map(cleanMemberName)
+      .filter(
+        m => m && 
+             !m.toLowerCase().includes('alex morgan') && 
+             !m.toLowerCase().includes('alex') &&
+             !m.toLowerCase().includes('priya sharma') &&
+             !m.toLowerCase().includes('priya')
+      );
+  }
+
+  await setDoc(docRef, sanitized, { merge: true });
 }
 
 /**
- * Reset Firestore collection to the default QA execution report template.
+ * Reset Firestore collection to a clean empty state.
  */
 export async function resetFirestoreToTemplate(): Promise<void> {
-  const snapshot = await getDocs(collection(db, DEFECTS_COLLECTION));
-  const batch = writeBatch(db);
-
-  // Delete all current records
-  snapshot.forEach((d) => {
-    batch.delete(d.ref);
-  });
-
-  // Re-seed default defects
-  for (const item of initialDefects) {
-    const dRef = doc(db, DEFECTS_COLLECTION, item.id);
-    batch.set(dRef, item);
-  }
-
-  // Re-seed default project meta
+  await clearAllDefectsInFirestore();
   const projRef = doc(db, CONFIG_COLLECTION, PROJECT_DOC_ID);
-  batch.set(projRef, initialProjectMeta);
-
-  await batch.commit();
+  await setDoc(projRef, initialProjectMeta);
 }

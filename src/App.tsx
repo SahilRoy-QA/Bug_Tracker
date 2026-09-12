@@ -3,7 +3,7 @@ import { Header } from './components/Header.tsx';
 import { DashboardView } from './components/DashboardView.tsx';
 import { DefectSheetView } from './components/DefectSheetView.tsx';
 import { DefectModal } from './components/DefectModal.tsx';
-import { ProjectSettingsView } from './components/ProjectSettingsModal.tsx';
+import { AdminDashboardView } from './components/AdminDashboardView.tsx';
 import { AboutView } from './components/AboutView.tsx';
 import { LoginPage } from './components/LoginPage.tsx';
 import { TestingLoadingScreen } from './components/TestingLoadingScreen.tsx';
@@ -17,6 +17,11 @@ import {
   saveStoredProject, 
   resetStoredData 
 } from './utils/storage.ts';
+import {
+  canUserEditDefect,
+  canUserDeleteDefect,
+  canUserCleanDatabase
+} from './utils/permissions.ts';
 import {
   subscribeToDefects,
   subscribeToProjectMeta,
@@ -33,7 +38,7 @@ import { seedUsersIfEmpty } from './firebase/authService.ts';
 import { CheckCircle2, AlertCircle, Info, X } from 'lucide-react';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'sheet' | 'project' | 'about'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'sheet' | 'about' | 'admin'>('dashboard');
   const [projectMeta, setProjectMeta] = useState<ProjectMeta>(() => loadStoredProject());
   const [defects, setDefects] = useState<DefectItem[]>(() => loadStoredDefects());
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
@@ -172,12 +177,19 @@ export default function App() {
       pending,
       passRate: total > 0 ? Math.round((passed / total) * 100) : 0,
       failRate: total > 0 ? Math.round((failed / total) * 100) : 0,
-      blockedRate: total > 0 ? Math.round((blocked / total) * 100) : 0
+      blockedRate: total > 0 ? Math.round((blocked / total) * 100) : 0,
+      pendingRate: total > 0 ? Math.round((pending / total) * 100) : 0
     };
   }, [defects]);
 
   // Update defect (instant local persistence + Firebase Firestore cloud sync)
   const handleUpdateDefect = async (id: string, updates: Partial<DefectItem>) => {
+    const target = defects.find(d => d.id === id || d.bugId === id);
+    if (target && !canUserEditDefect(target, currentUser || '')) {
+      showToast('Permission denied: You can only edit defects you reported.', 'error');
+      return;
+    }
+
     const today = new Date().toISOString().split('T')[0];
     const updatedList = defects.map(d =>
       d.id === id || d.bugId === id ? { ...d, ...updates, updatedDate: today } : d
@@ -196,6 +208,11 @@ export default function App() {
 
   // Delete defect (instant local persistence + Firebase Firestore cloud sync)
   const handleDeleteDefect = async (id: string) => {
+    if (!canUserDeleteDefect(currentUser || '')) {
+      showToast('Permission denied: Only administrator (@sahil_roy) can delete defects.', 'error');
+      return;
+    }
+
     const target = defects.find(d => d.id === id || d.bugId === id);
     const targetId = target?.id || id;
     const updatedList = defects.filter(d => d.id !== targetId && d.bugId !== targetId);
@@ -214,6 +231,11 @@ export default function App() {
   // Bulk delete defects (instant local persistence + Firebase Firestore batch delete)
   const handleBulkDeleteDefects = async (ids: string[]) => {
     if (ids.length === 0) return;
+    if (!canUserDeleteDefect(currentUser || '')) {
+      showToast('Permission denied: Only administrator (@sahil_roy) can delete defects.', 'error');
+      return;
+    }
+
     const idSet = new Set(ids);
     const updatedList = defects.filter(d => !idSet.has(d.id) && !idSet.has(d.bugId));
     setDefects(updatedList);
@@ -237,6 +259,7 @@ export default function App() {
       // Create new defect
       const today = new Date().toISOString().split('T')[0];
       const nextNum = defects.length + 1;
+      const username = currentUser || 'sahil_roy';
       const newDefect: DefectItem = {
         id: defectData.id || `defect-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
         bugId: defectData.bugId || `BUG-${100 + nextNum}`,
@@ -248,7 +271,9 @@ export default function App() {
         severity: defectData.severity || 'Medium',
         priority: defectData.priority || 'P2 - High',
         assignedTo: defectData.assignedTo || 'Unassigned',
-        reportedBy: defectData.reportedBy || 'QA Lead',
+        reportedBy: defectData.reportedBy || (username === 'sahil_roy' ? 'Sahil Roy (Lead)' : `@${username}`),
+        reportedByUsername: defectData.reportedByUsername || username,
+        createdBy: defectData.createdBy || username,
         environment: defectData.environment || 'QA Staging',
         stepsToReproduce: defectData.stepsToReproduce || '',
         expectedResult: defectData.expectedResult || '',
@@ -293,16 +318,25 @@ export default function App() {
 
   // Reset to original QA template
   const handleResetTemplate = () => {
+    if (!canUserCleanDatabase(currentUser || '')) {
+      showToast('Permission denied: Only administrator (@sahil_roy) can reset or clean the database.', 'error');
+      return;
+    }
     setIsResetConfirmOpen(true);
   };
 
   const confirmResetTemplate = async () => {
+    if (!canUserCleanDatabase(currentUser || '')) {
+      showToast('Permission denied: Only administrator (@sahil_roy) can reset or clean the database.', 'error');
+      setIsResetConfirmOpen(false);
+      return;
+    }
     setIsResetting(true);
     try {
       const reset = resetStoredData();
       setProjectMeta(reset.project);
       setDefects(reset.defects);
-      showToast('Database reset to original QA Execution Report', 'info');
+      showToast('Database reset to clean QA execution state', 'info');
 
       // Reset in Firestore
       try {
@@ -415,6 +449,7 @@ export default function App() {
             stats={stats}
             onNavigateToSheet={handleNavigateToSheetWithFilter}
             onSelectDefect={(defect) => setModalState({ isOpen: true, defect })}
+            onNavigateToAdmin={() => setActiveTab('admin')}
             currentUser={currentUser || 'sahil_roy'}
             onLogout={handleLogout}
             onChangePassword={() => setIsChangePasswordOpen(true)}
@@ -433,14 +468,19 @@ export default function App() {
             onImportCSV={handleImportCSV}
             onResetTemplate={handleResetTemplate}
             initialExecutionFilter={sheetExecutionFilter}
+            currentUser={currentUser || 'sahil_roy'}
           />
         )}
 
-        {activeTab === 'project' && (
-          <ProjectSettingsView
+        {activeTab === 'admin' && (
+          <AdminDashboardView
             projectMeta={projectMeta}
             onSaveMeta={handleSaveProjectMeta}
             onResetTemplate={handleResetTemplate}
+            onClearAllDefects={handleResetTemplate}
+            onNavigateBack={() => setActiveTab('dashboard')}
+            currentUser={currentUser || 'sahil_roy'}
+            totalDefects={defects.length}
           />
         )}
 
@@ -457,6 +497,7 @@ export default function App() {
         onSave={handleSaveDefect}
         onDelete={handleDeleteDefect}
         totalExisting={defects.length}
+        currentUser={currentUser || 'sahil_roy'}
       />
 
       {/* Change Password Modal */}
@@ -477,13 +518,13 @@ export default function App() {
               </div>
               <div className="space-y-1">
                 <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                  Reset to Default QA Template?
+                  Clean Database & Reset to Zero?
                 </h3>
                 <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                  This will reset all defect rows and test execution counts to the default 16 test cases (10 Passed, 1 Failed, 5 Blocked) from the original project specification.
+                  This will clear all logged defects and reset the database so you can begin adding defects and test cases from zero.
                 </p>
                 <p className="text-[11px] text-rose-500 dark:text-rose-400 font-medium">
-                  Any newly created defects or custom edits will be overwritten.
+                  All current defects and local records will be removed.
                 </p>
               </div>
             </div>
@@ -503,7 +544,7 @@ export default function App() {
                 disabled={isResetting}
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-rose-600 hover:bg-rose-500 text-white shadow-md shadow-rose-600/20 transition disabled:opacity-50"
               >
-                {isResetting ? 'Resetting...' : 'Yes, Reset Template'}
+                {isResetting ? 'Cleaning...' : 'Yes, Clean Database'}
               </button>
             </div>
           </div>

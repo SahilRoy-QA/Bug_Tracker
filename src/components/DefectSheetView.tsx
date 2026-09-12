@@ -19,7 +19,8 @@ import {
   ArrowUpDown,
   FileSpreadsheet,
   SlidersHorizontal,
-  Loader2
+  Loader2,
+  Lock
 } from 'lucide-react';
 import { 
   DefectItem, 
@@ -28,6 +29,11 @@ import {
   DefectSeverity, 
   DefectPriority 
 } from '../types.ts';
+import { 
+  canUserEditDefect, 
+  canUserDeleteDefect, 
+  canUserCleanDatabase 
+} from '../utils/permissions.ts';
 
 interface DefectSheetViewProps {
   defects: DefectItem[];
@@ -40,6 +46,7 @@ interface DefectSheetViewProps {
   onImportCSV: (file: File) => void;
   onResetTemplate: () => void;
   initialExecutionFilter?: string;
+  currentUser?: string;
 }
 
 export const DefectSheetView: React.FC<DefectSheetViewProps> = ({
@@ -52,7 +59,8 @@ export const DefectSheetView: React.FC<DefectSheetViewProps> = ({
   onExportCSV,
   onImportCSV,
   onResetTemplate,
-  initialExecutionFilter = 'All'
+  initialExecutionFilter = 'All',
+  currentUser = 'sahil_roy'
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [executionFilter, setExecutionFilter] = useState<string>(initialExecutionFilter);
@@ -66,6 +74,9 @@ export const DefectSheetView: React.FC<DefectSheetViewProps> = ({
   const [defectToDelete, setDefectToDelete] = useState<DefectItem | null>(null);
   const [isConfirmingBulkDelete, setIsConfirmingBulkDelete] = useState(false);
   const [isDeletingDefect, setIsDeletingDefect] = useState(false);
+
+  const canCleanDb = canUserCleanDatabase(currentUser);
+  const canDelete = canUserDeleteDefect(currentUser);
 
   // Available unique modules
   const modules = useMemo(() => {
@@ -243,7 +254,7 @@ export const DefectSheetView: React.FC<DefectSheetViewProps> = ({
           </div>
 
           {/* Action buttons */}
-          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+          <div className="flex items-center gap-1.5 flex-wrap sm:flex-nowrap no-scrollbar py-0.5">
             {/* Mobile View Toggle */}
             <div className="flex md:hidden items-center bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700/80 rounded-xl p-0.5 shrink-0">
               <button
@@ -290,14 +301,16 @@ export const DefectSheetView: React.FC<DefectSheetViewProps> = ({
               <span className="hidden sm:inline">CSV</span>
             </button>
 
-            <button
-              onClick={onResetTemplate}
-              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-medium bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-600 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 border border-slate-200 dark:border-slate-700/80 transition shrink-0"
-              title="Reset template sample"
-            >
-              <RotateCcw className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
-              <span className="hidden sm:inline">Reset</span>
-            </button>
+            {canCleanDb && (
+              <button
+                onClick={onResetTemplate}
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-medium bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-600 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 border border-slate-200 dark:border-slate-700/80 transition shrink-0"
+                title="Reset / Clean Database (Admin only)"
+              >
+                <RotateCcw className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+                <span className="hidden sm:inline">Reset</span>
+              </button>
+            )}
 
             <button
               onClick={onAddDefect}
@@ -310,39 +323,35 @@ export const DefectSheetView: React.FC<DefectSheetViewProps> = ({
         </div>
 
         {/* Filters Row */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-200 dark:border-slate-700/60 text-xs">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 pt-3 border-t border-slate-200 dark:border-slate-700/60 text-xs">
           {/* Status Quick Pills */}
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-slate-500 dark:text-slate-400 text-xs mr-1 font-medium">Execution:</span>
+          <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+            <span className="text-slate-500 dark:text-slate-400 text-xs mr-0.5 font-medium shrink-0">Execution:</span>
             {[
-              { label: 'All', count: defects.length, color: 'hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300' },
+              { label: 'All', count: defects.length },
               { 
                 label: 'Passed', 
                 count: defects.filter(d => d.testExecutionStatus === 'Passed').length,
-                color: 'text-emerald-600 dark:text-emerald-400 border-emerald-300 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/10'
               },
               { 
                 label: 'Failed', 
                 count: defects.filter(d => d.testExecutionStatus === 'Failed').length,
-                color: 'text-rose-600 dark:text-rose-400 border-rose-300 dark:border-rose-500/30 bg-rose-50 dark:bg-rose-500/10'
               },
               { 
                 label: 'Blocked', 
                 count: defects.filter(d => d.testExecutionStatus === 'Blocked').length,
-                color: 'text-yellow-700 dark:text-yellow-300 border-yellow-200 dark:border-yellow-600/30 bg-yellow-50 dark:bg-yellow-500/10'
               },
               { 
                 label: 'Pending', 
                 count: defects.filter(d => d.testExecutionStatus === 'Pending').length,
-                color: 'text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-800'
               }
             ].map(pill => (
               <button
                 key={pill.label}
                 onClick={() => setExecutionFilter(pill.label)}
-                className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition ${
+                className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition shrink-0 ${
                   executionFilter === pill.label
-                    ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm'
+                    ? 'bg-indigo-600 text-white border-indigo-500 shadow-xs'
                     : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                 }`}
               >
@@ -355,13 +364,13 @@ export const DefectSheetView: React.FC<DefectSheetViewProps> = ({
           </div>
 
           {/* Module & Severity Dropdowns */}
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5">
-              <span className="text-slate-500 dark:text-slate-400">Severity:</span>
+          <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 w-full lg:w-auto min-w-0">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="text-slate-500 dark:text-slate-400 shrink-0 text-xs font-medium">Severity:</span>
               <select
                 value={severityFilter}
                 onChange={e => setSeverityFilter(e.target.value)}
-                className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:border-indigo-500"
+                className="w-full sm:w-auto min-w-0 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:border-indigo-500 truncate"
               >
                 <option value="All">All Severities</option>
                 <option value="Critical">Critical</option>
@@ -371,12 +380,12 @@ export const DefectSheetView: React.FC<DefectSheetViewProps> = ({
               </select>
             </div>
 
-            <div className="flex items-center gap-1.5">
-              <span className="text-slate-500 dark:text-slate-400">Module:</span>
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="text-slate-500 dark:text-slate-400 shrink-0 text-xs font-medium">Module:</span>
               <select
                 value={moduleFilter}
                 onChange={e => setModuleFilter(e.target.value)}
-                className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:border-indigo-500"
+                className="w-full sm:w-auto min-w-0 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:border-indigo-500 truncate"
               >
                 <option value="All">All Modules</option>
                 {modules.map(mod => (
@@ -415,14 +424,16 @@ export const DefectSheetView: React.FC<DefectSheetViewProps> = ({
               >
                 Blocked
               </button>
-              <button
-                onClick={() => setIsConfirmingBulkDelete(true)}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-rose-600 hover:bg-rose-500 text-white font-medium transition shadow-xs"
-                title="Delete selected rows"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-                <span>Delete Selected ({selectedIds.length})</span>
-              </button>
+              {canDelete && (
+                <button
+                  onClick={() => setIsConfirmingBulkDelete(true)}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-rose-600 hover:bg-rose-500 text-white font-medium transition shadow-xs"
+                  title="Delete selected rows (Admin only)"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Delete Selected ({selectedIds.length})</span>
+                </button>
+              )}
               <button
                 onClick={() => setSelectedIds([])}
                 className="text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white px-2 py-1"
@@ -439,17 +450,34 @@ export const DefectSheetView: React.FC<DefectSheetViewProps> = ({
         {filteredDefects.length === 0 ? (
           <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700/70 p-8 text-center text-slate-500 dark:text-slate-400 shadow-xs">
             <FileSpreadsheet className="w-8 h-8 text-slate-400 dark:text-slate-500 mx-auto mb-2 opacity-60" />
-            <p className="text-xs font-medium">No defects or test cases match your filter criteria.</p>
-            <button
-              onClick={() => { setSearchTerm(''); setExecutionFilter('All'); setSeverityFilter('All'); setModuleFilter('All'); }}
-              className="mt-2 text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 dark:hover:text-indigo-300 font-semibold text-xs"
-            >
-              Reset filters
-            </button>
+            {defects.length === 0 ? (
+              <>
+                <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">Database is clean (0 defects)</p>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">Start adding bugs from zero.</p>
+                <button
+                  onClick={onAddDefect}
+                  className="mt-3 inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-medium bg-indigo-600 hover:bg-indigo-500 text-white shadow-xs"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Log First Defect</span>
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="text-xs font-medium">No defects or test cases match your filter criteria.</p>
+                <button
+                  onClick={() => { setSearchTerm(''); setExecutionFilter('All'); setSeverityFilter('All'); setModuleFilter('All'); }}
+                  className="mt-2 text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 dark:hover:text-indigo-300 font-semibold text-xs"
+                >
+                  Reset filters
+                </button>
+              </>
+            )}
           </div>
         ) : (
           filteredDefects.map(d => {
             const isRowUpdating = isUpdating === d.id;
+            const canEdit = canUserEditDefect(d, currentUser);
             return (
               <div 
                 key={`card-${d.id}`}
@@ -478,20 +506,22 @@ export const DefectSheetView: React.FC<DefectSheetViewProps> = ({
                     <button
                       onClick={() => onOpenDefectModal(d)}
                       className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/50"
-                      title="Edit"
+                      title={canEdit ? "Edit defect" : "View defect (Read-Only)"}
                     >
-                      <Edit3 className="w-3.5 h-3.5" />
+                      {canEdit ? <Edit3 className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5 text-indigo-500" />}
                     </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setDefectToDelete(d);
-                      }}
-                      className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-slate-100 dark:hover:bg-slate-700/50 transition"
-                      title="Delete defect"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                    {canDelete && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDefectToDelete(d);
+                        }}
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-slate-100 dark:hover:bg-slate-700/50 transition"
+                        title="Delete defect (Admin only)"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -511,9 +541,11 @@ export const DefectSheetView: React.FC<DefectSheetViewProps> = ({
                     </label>
                     <select
                       value={d.testExecutionStatus}
-                      disabled={isRowUpdating}
+                      disabled={isRowUpdating || !canEdit}
                       onChange={e => handleStatusChange(d.id, e.target.value as TestExecutionStatus)}
                       className={`w-full px-2 py-1.5 rounded-xl text-xs font-medium border focus:outline-none transition ${
+                        !canEdit ? 'opacity-75 cursor-not-allowed ' : ''
+                      }${
                         d.testExecutionStatus === 'Passed'
                           ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-600/40'
                           : d.testExecutionStatus === 'Failed'
@@ -536,9 +568,11 @@ export const DefectSheetView: React.FC<DefectSheetViewProps> = ({
                     </label>
                     <select
                       value={d.defectStatus}
-                      disabled={isRowUpdating}
+                      disabled={isRowUpdating || !canEdit}
                       onChange={e => handleDefectStatusChange(d.id, e.target.value as DefectStatus)}
-                      className="w-full px-2 py-1.5 rounded-xl text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 focus:outline-none"
+                      className={`w-full px-2 py-1.5 rounded-xl text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 focus:outline-none ${
+                        !canEdit ? 'opacity-75 cursor-not-allowed' : ''
+                      }`}
                     >
                       <option value="Open">Open</option>
                       <option value="In Progress">In Progress</option>
@@ -670,19 +704,36 @@ export const DefectSheetView: React.FC<DefectSheetViewProps> = ({
                 <tr>
                   <td colSpan={11} className="p-12 text-center text-slate-500 dark:text-slate-400">
                     <FileSpreadsheet className="w-10 h-10 text-slate-400 dark:text-slate-600 mx-auto mb-2" />
-                    <p className="text-sm font-medium">No defects or test cases match your filter criteria.</p>
-                    <button
-                      onClick={() => { setSearchTerm(''); setExecutionFilter('All'); setSeverityFilter('All'); setModuleFilter('All'); }}
-                      className="mt-3 text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 dark:hover:text-indigo-300 font-semibold text-xs"
-                    >
-                      Clear all filters
-                    </button>
+                    {defects.length === 0 ? (
+                      <>
+                        <p className="text-sm font-bold text-slate-800 dark:text-slate-200">Database is clean (0 defects)</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Ready to add bugs from zero.</p>
+                        <button
+                          onClick={onAddDefect}
+                          className="mt-4 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-medium bg-indigo-600 hover:bg-indigo-500 text-white shadow-xs transition"
+                        >
+                          <Plus className="w-4 h-4" />
+                          <span>Log First Defect</span>
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-sm font-medium">No defects or test cases match your filter criteria.</p>
+                        <button
+                          onClick={() => { setSearchTerm(''); setExecutionFilter('All'); setSeverityFilter('All'); setModuleFilter('All'); }}
+                          className="mt-3 text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 dark:hover:text-indigo-300 font-semibold text-xs"
+                        >
+                          Clear all filters
+                        </button>
+                      </>
+                    )}
                   </td>
                 </tr>
               ) : (
                 filteredDefects.map((d, index) => {
                   const isSelected = selectedIds.includes(d.id);
                   const isRowUpdating = isUpdating === d.id;
+                  const canEdit = canUserEditDefect(d, currentUser);
 
                   return (
                     <tr 
@@ -743,9 +794,12 @@ export const DefectSheetView: React.FC<DefectSheetViewProps> = ({
                       <td className="p-3 whitespace-nowrap">
                         <select
                           value={d.testExecutionStatus}
-                          disabled={isRowUpdating}
+                          disabled={isRowUpdating || !canEdit}
+                          title={canEdit ? undefined : "Only the author or Administrator can modify status"}
                           onChange={e => handleStatusChange(d.id, e.target.value as TestExecutionStatus)}
-                          className={`px-2.5 py-1 rounded-lg text-xs font-bold border focus:outline-none cursor-pointer transition ${
+                          className={`px-2.5 py-1 rounded-lg text-xs font-bold border focus:outline-none transition ${
+                            !canEdit ? 'opacity-75 cursor-not-allowed ' : 'cursor-pointer '
+                          }${
                             d.testExecutionStatus === 'Passed'
                               ? 'bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/30'
                               : d.testExecutionStatus === 'Failed'
@@ -766,9 +820,12 @@ export const DefectSheetView: React.FC<DefectSheetViewProps> = ({
                       <td className="p-3 whitespace-nowrap">
                         <select
                           value={d.defectStatus}
-                          disabled={isRowUpdating}
+                          disabled={isRowUpdating || !canEdit}
+                          title={canEdit ? undefined : "Only the author or Administrator can modify status"}
                           onChange={e => handleDefectStatusChange(d.id, e.target.value as DefectStatus)}
-                          className="px-2 py-1 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-300 text-xs font-semibold focus:outline-none cursor-pointer"
+                          className={`px-2 py-1 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-300 text-xs font-semibold focus:outline-none ${
+                            !canEdit ? 'opacity-75 cursor-not-allowed' : 'cursor-pointer'
+                          }`}
                         >
                           <option value="Open">Open</option>
                           <option value="In Progress">In Progress</option>
@@ -783,9 +840,12 @@ export const DefectSheetView: React.FC<DefectSheetViewProps> = ({
                       <td className="p-3 whitespace-nowrap">
                         <select
                           value={d.severity}
-                          disabled={isRowUpdating}
+                          disabled={isRowUpdating || !canEdit}
+                          title={canEdit ? undefined : "Only the author or Administrator can modify status"}
                           onChange={e => handleSeverityChange(d.id, e.target.value as DefectSeverity)}
-                          className={`px-2 py-1 rounded text-[11px] font-bold border focus:outline-none cursor-pointer ${
+                          className={`px-2 py-1 rounded text-[11px] font-bold border focus:outline-none ${
+                            !canEdit ? 'opacity-75 cursor-not-allowed ' : 'cursor-pointer '
+                          }${
                             d.severity === 'Critical'
                               ? 'bg-red-50 text-red-700 border-red-200 dark:bg-red-500/20 dark:text-red-400 dark:border-red-500/40'
                               : d.severity === 'High'
@@ -818,20 +878,22 @@ export const DefectSheetView: React.FC<DefectSheetViewProps> = ({
                           <button
                             onClick={() => onOpenDefectModal(d)}
                             className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-700 dark:hover:text-white transition"
-                            title="Edit full defect details"
+                            title={canEdit ? "Edit full defect details" : "View full defect details (Read-Only)"}
                           >
-                            <Edit3 className="w-3.5 h-3.5" />
+                            {canEdit ? <Edit3 className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5 text-indigo-500" />}
                           </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setDefectToDelete(d);
-                            }}
-                            className="p-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-500/20 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 transition"
-                            title="Delete defect row"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
+                          {canDelete && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDefectToDelete(d);
+                              }}
+                              className="p-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-500/20 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 transition"
+                              title="Delete defect row (Admin only)"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
