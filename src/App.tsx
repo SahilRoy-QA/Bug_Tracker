@@ -4,13 +4,14 @@ import { DashboardView } from './components/DashboardView.tsx';
 import { DefectSheetView } from './components/DefectSheetView.tsx';
 import { DefectModal } from './components/DefectModal.tsx';
 import { ProjectSettingsView } from './components/ProjectSettingsModal.tsx';
+import { AboutView } from './components/AboutView.tsx';
 import { initialDefects, initialProjectMeta } from './data/initialData.ts';
 import { DefectItem, ProjectMeta, ExecutionReportStats } from './types.ts';
 import { exportDefectsToCSV, parseCSVToDefects } from './utils/csvHelper.ts';
 import { CheckCircle2, AlertCircle, Info, X } from 'lucide-react';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'sheet' | 'project'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'sheet' | 'project' | 'about'>('dashboard');
   const [projectMeta, setProjectMeta] = useState<ProjectMeta>(initialProjectMeta);
   const [defects, setDefects] = useState<DefectItem[]>(initialDefects);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
@@ -339,6 +340,10 @@ export default function App() {
             onSaveMeta={handleSaveProjectMeta}
             onResetTemplate={handleResetTemplate}
           />
+        )}
+
+        {activeTab === 'about' && (
+          <AboutView />
         )}
       </main>
 

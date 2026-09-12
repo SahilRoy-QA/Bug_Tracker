@@ -13,8 +13,6 @@ import {
   Trash2, 
   Edit3, 
   ExternalLink, 
-  HardDrive, 
-  FolderGit2, 
   Eye, 
   Layers,
   ChevronDown,
@@ -331,7 +329,7 @@ export const DefectSheetView: React.FC<DefectSheetViewProps> = ({
               { 
                 label: 'Blocked', 
                 count: defects.filter(d => d.testExecutionStatus === 'Blocked').length,
-                color: 'text-amber-600 dark:text-amber-400 border-amber-300 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10'
+                color: 'text-yellow-700 dark:text-yellow-300 border-yellow-200 dark:border-yellow-600/30 bg-yellow-50 dark:bg-yellow-500/10'
               },
               { 
                 label: 'Pending', 
@@ -413,7 +411,7 @@ export const DefectSheetView: React.FC<DefectSheetViewProps> = ({
               </button>
               <button
                 onClick={() => handleBulkStatusChange('Blocked')}
-                className="px-2 py-1 rounded bg-amber-600 hover:bg-amber-500 text-white font-medium"
+                className="px-2 py-1 rounded bg-yellow-400 hover:bg-yellow-300 text-slate-900 font-semibold"
               >
                 Blocked
               </button>
@@ -521,7 +519,7 @@ export const DefectSheetView: React.FC<DefectSheetViewProps> = ({
                           : d.testExecutionStatus === 'Failed'
                           ? 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-600/40'
                           : d.testExecutionStatus === 'Blocked'
-                          ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-600/40'
+                          ? 'bg-yellow-50 text-yellow-800 border-yellow-200 dark:bg-yellow-950/40 dark:text-yellow-300 dark:border-yellow-600/40'
                           : 'bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-900 dark:text-slate-300 dark:border-slate-700'
                       }`}
                     >
@@ -552,7 +550,7 @@ export const DefectSheetView: React.FC<DefectSheetViewProps> = ({
                   </div>
                 </div>
 
-                {/* Footer metadata: Severity, Assignee, Links */}
+                {/* Footer metadata: Severity, Assignee */}
                 <div className="flex items-center justify-between gap-2 pt-2 text-[11px] text-slate-500 dark:text-slate-400 border-t border-slate-100 dark:border-slate-800/80">
                   <div className="flex items-center gap-2">
                     <span className={`px-2 py-0.5 rounded-md font-medium text-[10px] border ${
@@ -566,34 +564,9 @@ export const DefectSheetView: React.FC<DefectSheetViewProps> = ({
                     }`}>
                       {d.severity}
                     </span>
-                    <span className="truncate max-w-[120px] text-slate-700 dark:text-slate-300">
+                    <span className="truncate max-w-[150px] text-slate-700 dark:text-slate-300">
                       {d.assignedTo}
                     </span>
-                  </div>
-
-                  <div className="flex items-center gap-1.5">
-                    {d.driveLink && (
-                      <a 
-                        href={d.driveLink} 
-                        target="_blank" 
-                        rel="noreferrer"
-                        className="p-1 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
-                        title="Drive Evidence"
-                      >
-                        <HardDrive className="w-3.5 h-3.5" />
-                      </a>
-                    )}
-                    {d.githubLink && (
-                      <a 
-                        href={d.githubLink} 
-                        target="_blank" 
-                        rel="noreferrer"
-                        className="p-1 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
-                        title="GitHub Link"
-                      >
-                        <FolderGit2 className="w-3.5 h-3.5" />
-                      </a>
-                    )}
                   </div>
                 </div>
               </div>
@@ -689,14 +662,13 @@ export const DefectSheetView: React.FC<DefectSheetViewProps> = ({
                   </div>
                 </th>
                 <th className="p-3.5">Assignee</th>
-                <th className="p-3.5 text-center">Links</th>
                 <th className="p-3.5 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 dark:divide-slate-800 font-sans">
               {filteredDefects.length === 0 ? (
                 <tr>
-                  <td colSpan={12} className="p-12 text-center text-slate-500 dark:text-slate-400">
+                  <td colSpan={11} className="p-12 text-center text-slate-500 dark:text-slate-400">
                     <FileSpreadsheet className="w-10 h-10 text-slate-400 dark:text-slate-600 mx-auto mb-2" />
                     <p className="text-sm font-medium">No defects or test cases match your filter criteria.</p>
                     <button
@@ -779,7 +751,7 @@ export const DefectSheetView: React.FC<DefectSheetViewProps> = ({
                               : d.testExecutionStatus === 'Failed'
                               ? 'bg-rose-50 text-rose-700 border-rose-300 dark:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/30'
                               : d.testExecutionStatus === 'Blocked'
-                              ? 'bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/30'
+                              ? 'bg-yellow-50 text-yellow-800 border-yellow-200 dark:bg-yellow-950/40 dark:text-yellow-300 dark:border-yellow-600/40'
                               : 'bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'
                           }`}
                         >
@@ -838,36 +810,6 @@ export const DefectSheetView: React.FC<DefectSheetViewProps> = ({
                       {/* Assignee */}
                       <td className="p-3 whitespace-nowrap text-slate-700 dark:text-slate-300 text-xs">
                         {d.assignedTo}
-                      </td>
-
-                      {/* Links */}
-                      <td className="p-3 whitespace-nowrap text-center">
-                        <div className="flex items-center justify-center gap-1.5">
-                          {d.driveLink ? (
-                            <a 
-                              href={d.driveLink} 
-                              target="_blank" 
-                              rel="noreferrer"
-                              title="View Drive Evidence"
-                              className="p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-blue-600 dark:text-blue-400"
-                            >
-                              <HardDrive className="w-3.5 h-3.5" />
-                            </a>
-                          ) : (
-                            <span className="text-slate-400 dark:text-slate-600">-</span>
-                          )}
-                          {d.githubLink ? (
-                            <a 
-                              href={d.githubLink} 
-                              target="_blank" 
-                              rel="noreferrer"
-                              title="View GitHub Link"
-                              className="p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-purple-600 dark:text-purple-400"
-                            >
-                              <FolderGit2 className="w-3.5 h-3.5" />
-                            </a>
-                          ) : null}
-                        </div>
                       </td>
 
                       {/* Actions */}

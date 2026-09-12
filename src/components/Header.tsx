@@ -13,14 +13,15 @@ import {
   ChevronDown,
   Menu,
   X,
-  Check
+  Check,
+  Info
 } from 'lucide-react';
 import { ProjectMeta } from '../types.ts';
 import { useTheme } from '../context/ThemeContext.tsx';
 
 interface HeaderProps {
-  activeTab: 'dashboard' | 'sheet' | 'project';
-  setActiveTab: (tab: 'dashboard' | 'sheet' | 'project') => void;
+  activeTab: 'dashboard' | 'sheet' | 'project' | 'about';
+  setActiveTab: (tab: 'dashboard' | 'sheet' | 'project' | 'about') => void;
   projectMeta: ProjectMeta;
   totalDefects: number;
   onOpenNewDefect: () => void;
@@ -77,6 +78,12 @@ export const Header: React.FC<HeaderProps> = ({
       label: 'Project Details',
       icon: Settings,
       description: 'Test suite & configuration'
+    },
+    {
+      id: 'about' as const,
+      label: 'About',
+      icon: Info,
+      description: 'App details & Illusio Tech info'
     }
   ];
 
@@ -96,8 +103,7 @@ export const Header: React.FC<HeaderProps> = ({
             <div className="shrink-0">
               <div className="flex items-center gap-1.5 sm:gap-2">
                 <h1 className="text-xs sm:text-sm md:text-base font-bold tracking-tight text-slate-900 dark:text-slate-100 whitespace-nowrap">
-                  <span className="hidden sm:inline">Defect &amp; Bug Tracker</span>
-                  <span className="sm:hidden">Defect Tracker</span>
+                  Illusion_Dashboard
                 </h1>
                 <span className="hidden md:inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700/80 truncate max-w-[120px]">
                   {projectMeta.projectName}
@@ -108,7 +114,7 @@ export const Header: React.FC<HeaderProps> = ({
                 </span>
               </div>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 hidden sm:block truncate">
-                Test Execution Status &amp; Defect Management
+                Quality Engineering &amp; Defect Tracker by Illusio Tech
               </p>
             </div>
           </div>

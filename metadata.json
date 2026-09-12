@@ -1,6 +1,6 @@
 {
-  "name": "Defect & Bug Tracker",
-  "description": "QA Defect and Bug Tracker dashboard with live Test Execution Status reporting and backend Defect Tracker spreadsheet database.",
+  "name": "Illusion_Dashboard",
+  "description": "Enterprise QA Defect and Test Execution Status Dashboard by Illusio Tech.",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"

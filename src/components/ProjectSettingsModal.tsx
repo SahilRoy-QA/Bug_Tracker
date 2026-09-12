@@ -3,8 +3,6 @@ import {
   Save, 
   Plus, 
   Trash2, 
-  HardDrive, 
-  FolderGit2, 
   ExternalLink, 
   Calendar, 
   Users, 
@@ -204,35 +202,6 @@ export const ProjectSettingsView: React.FC<ProjectSettingsViewProps> = ({
                 <Plus className="w-3.5 h-3.5" />
                 <span>Add Member</span>
               </button>
-            </div>
-          </div>
-
-          {/* Row 5: Drive Link & Github Link */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1.5">
-                <HardDrive className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400" />
-                <span>Google Drive Link (Evidence / Logs)</span>
-              </label>
-              <input
-                type="url"
-                value={formData.driveLink}
-                onChange={e => setFormData({ ...formData, driveLink: e.target.value })}
-                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1.5">
-                <FolderGit2 className="w-3.5 h-3.5 text-purple-500 dark:text-purple-400" />
-                <span>GitHub Repository Link</span>
-              </label>
-              <input
-                type="url"
-                value={formData.githubRepoLink}
-                onChange={e => setFormData({ ...formData, githubRepoLink: e.target.value })}
-                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500"
-              />
             </div>
           </div>
 

@@ -10,8 +10,6 @@ import {
   Calendar, 
   Users, 
   ExternalLink, 
-  HardDrive, 
-  FolderGit2, 
   ArrowRight,
   ShieldAlert,
   Flame
@@ -53,7 +51,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const executionChartData = useMemo(() => [
     { name: 'Passed', value: stats.passed, color: '#10b981' }, // Emerald-500
     { name: 'Failed', value: stats.failed, color: '#e11d48' }, // Rose-600
-    { name: 'Blocked', value: stats.blocked, color: '#d97706' }, // Amber-600
+    { name: 'Blocked', value: stats.blocked, color: '#facc15' }, // Light Yellow (yellow-400)
     { name: 'Pending', value: stats.pending, color: '#64748b' }, // Slate-500
   ].filter(item => item.value > 0), [stats]);
 
@@ -142,9 +140,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </button>
             <button
               onClick={() => onNavigateToSheet('Blocked')}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 dark:bg-amber-500/10 dark:hover:bg-amber-500/20 dark:text-amber-300 dark:border-amber-500/30 text-xs font-semibold transition"
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-yellow-50 hover:bg-yellow-100 text-yellow-800 border border-yellow-200 dark:bg-yellow-500/10 dark:hover:bg-yellow-500/20 dark:text-yellow-300 dark:border-yellow-500/30 text-xs font-semibold transition"
             >
-              <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+              <AlertTriangle className="w-4 h-4 text-yellow-600 dark:text-yellow-400" />
               <span>View Blocked Tests ({stats.blocked})</span>
             </button>
             <button
@@ -241,25 +239,25 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         {/* Blocked */}
         <div 
           onClick={() => onNavigateToSheet('Blocked')}
-          className="bg-white dark:bg-slate-800/80 hover:bg-amber-50/50 dark:hover:bg-slate-800 p-5 rounded-2xl border border-amber-200 dark:border-amber-500/30 shadow-xs dark:shadow-lg cursor-pointer transition transform hover:-translate-y-0.5 group"
+          className="bg-white dark:bg-slate-800/80 hover:bg-yellow-50/50 dark:hover:bg-yellow-950/20 p-5 rounded-2xl border border-yellow-200 dark:border-yellow-600/30 shadow-xs dark:shadow-lg cursor-pointer transition transform hover:-translate-y-0.5 group"
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+            <span className="text-xs font-semibold uppercase tracking-wider text-yellow-700 dark:text-yellow-400">
               Blocked
             </span>
-            <div className="p-2 rounded-xl bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 group-hover:scale-110 transition">
+            <div className="p-2 rounded-xl bg-yellow-50 dark:bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 group-hover:scale-110 transition">
               <AlertTriangle className="w-4 h-4" />
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-extrabold text-amber-600 dark:text-amber-400 font-mono">
+            <span className="text-3xl font-extrabold text-yellow-600 dark:text-yellow-400 font-mono">
               {stats.blocked}
             </span>
-            <span className="text-xs font-medium text-amber-700/80 dark:text-amber-500/80">
+            <span className="text-xs font-medium text-yellow-700/80 dark:text-yellow-400/80">
               ({stats.blockedRate}%)
             </span>
           </div>
-          <div className="mt-2 text-xs text-amber-600 dark:text-amber-400/90">
+          <div className="mt-2 text-xs text-yellow-700 dark:text-yellow-400/90">
             Dependent on Fix
           </div>
         </div>
@@ -293,16 +291,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Donut Chart: Test Execution Status Report */}
         <div className="lg:col-span-7 bg-white dark:bg-slate-800/80 rounded-2xl p-6 border border-slate-200 dark:border-slate-700/60 shadow-xs dark:shadow-lg flex flex-col justify-between transition-colors">
-          <div className="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-700/60">
-            <div>
-              <h3 className="text-base font-bold text-slate-900 dark:text-white">
+          <div className="flex items-center justify-between gap-3 pb-4 border-b border-slate-200 dark:border-slate-700/60">
+            <div className="min-w-0">
+              <h3 className="text-base font-bold text-slate-900 dark:text-white truncate">
                 Test Execution Breakdown
               </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
                 Visualizing Pass, Fail, and Blocked distribution ({stats.totalExecuted} test runs)
               </p>
             </div>
-            <span className="text-xs px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-700/80 text-slate-700 dark:text-slate-300 font-mono font-medium">
+            <span className="text-xs px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-700/80 text-slate-700 dark:text-slate-300 font-mono font-medium whitespace-nowrap shrink-0">
               Pass Rate: {stats.passRate}%
             </span>
           </div>
@@ -376,14 +374,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 </div>
               </div>
 
-              <div className="p-3 rounded-xl bg-amber-50/50 dark:bg-slate-900/60 border border-amber-200 dark:border-amber-500/20 flex items-center justify-between">
+              <div className="p-3 rounded-xl bg-yellow-50/60 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-600/30 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-amber-500" />
-                  <span className="text-xs font-semibold text-amber-700 dark:text-amber-300">Blocked Tests</span>
+                  <div className="w-3 h-3 rounded-full bg-yellow-400" />
+                  <span className="text-xs font-semibold text-yellow-800 dark:text-yellow-300">Blocked Tests</span>
                 </div>
                 <div className="text-right">
-                  <span className="text-sm font-bold text-amber-600 dark:text-amber-400 font-mono">{stats.blocked}</span>
-                  <span className="text-[11px] text-slate-500 dark:text-slate-400 ml-1.5">({stats.blockedRate}%)</span>
+                  <span className="text-sm font-bold text-yellow-700 dark:text-yellow-300 font-mono">{stats.blocked}</span>
+                  <span className="text-[11px] text-yellow-600/80 dark:text-yellow-400/80 ml-1.5">({stats.blockedRate}%)</span>
                 </div>
               </div>
 
@@ -469,20 +467,20 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         {/* Critical Failure Card */}
         <div className="lg:col-span-6 bg-white dark:bg-slate-800/80 rounded-2xl p-6 border border-rose-200 dark:border-rose-500/30 shadow-xs dark:shadow-lg transition-colors">
           <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-700/60">
-            <div className="flex items-center gap-2.5">
-              <span className="p-2 rounded-xl bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <span className="p-2 rounded-xl bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 shrink-0">
                 <AlertOctagon className="w-5 h-5" />
               </span>
-              <div>
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+              <div className="min-w-0">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white truncate">
                   Active Blocker Defect
                 </h3>
-                <span className="text-xs text-rose-600 dark:text-rose-400 font-mono">
+                <span className="text-xs text-rose-600 dark:text-rose-400 font-mono block truncate">
                   BUG-101 (Critical Severity / P1)
                 </span>
               </div>
             </div>
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-50 dark:bg-rose-500/20 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-500/30">
+            <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-50 dark:bg-rose-500/20 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-500/30 whitespace-nowrap shrink-0">
               Open &amp; Blocking
             </span>
           </div>
@@ -533,10 +531,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
 
         {/* Blocked Test Cases Impact list */}
-        <div className="lg:col-span-6 bg-white dark:bg-slate-800/80 rounded-2xl p-6 border border-amber-200 dark:border-amber-500/30 shadow-xs dark:shadow-lg transition-colors">
+        <div className="lg:col-span-6 bg-white dark:bg-slate-800/80 rounded-2xl p-6 border border-yellow-200 dark:border-yellow-600/30 shadow-xs dark:shadow-lg transition-colors">
           <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-700/60">
             <div className="flex items-center gap-2.5">
-              <span className="p-2 rounded-xl bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400">
+              <span className="p-2 rounded-xl bg-yellow-50 dark:bg-yellow-500/10 text-yellow-600 dark:text-yellow-400">
                 <AlertTriangle className="w-5 h-5" />
               </span>
               <div>
@@ -550,7 +548,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
             <button
               onClick={() => onNavigateToSheet('Blocked')}
-              className="text-xs text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 font-semibold inline-flex items-center gap-1"
+              className="text-xs text-yellow-600 dark:text-yellow-400 hover:text-yellow-700 dark:hover:text-yellow-300 font-semibold inline-flex items-center gap-1"
             >
               View all <ArrowRight className="w-3.5 h-3.5" />
             </button>
@@ -559,13 +557,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <div className="mt-4 space-y-2 max-h-72 overflow-y-auto pr-1">
             {blockedDefects.map(item => (
               <div 
-                key={item.id}
+                key={item.id} 
                 onClick={() => onSelectDefect(item)}
-                className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 hover:border-amber-300 dark:hover:border-amber-500/40 transition cursor-pointer flex items-center justify-between gap-3"
+                className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 hover:border-yellow-300 dark:hover:border-yellow-500/40 transition cursor-pointer flex items-center justify-between gap-3"
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <span className="text-[11px] font-mono text-amber-600 dark:text-amber-400 font-semibold">
+                    <span className="text-[11px] font-mono text-yellow-600 dark:text-yellow-400 font-semibold">
                       {item.bugId}
                     </span>
                     <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-200/80 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-medium">
@@ -576,7 +574,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     {item.title}
                   </p>
                 </div>
-                <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-500/20 shrink-0">
+                <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-yellow-50 dark:bg-yellow-500/10 text-yellow-800 dark:text-yellow-300 border border-yellow-200 dark:border-yellow-600/30 whitespace-nowrap shrink-0">
                   Blocked
                 </span>
               </div>
@@ -603,7 +601,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 text-sm">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 text-sm">
           <div className="space-y-1">
             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
               Project Name
@@ -646,36 +644,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   {member}
                 </span>
               ))}
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-              Connected QA Repositories
-            </span>
-            <div className="flex flex-col gap-1.5">
-              {projectMeta.driveLink && (
-                <a
-                  href={projectMeta.driveLink}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
-                >
-                  <HardDrive className="w-3.5 h-3.5" />
-                  <span>Google Drive Evidence Folder</span>
-                </a>
-              )}
-              {projectMeta.githubRepoLink && (
-                <a
-                  href={projectMeta.githubRepoLink}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 text-xs text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300"
-                >
-                  <FolderGit2 className="w-3.5 h-3.5" />
-                  <span>GitHub Repository</span>
-                </a>
-              )}
             </div>
           </div>
         </div>
