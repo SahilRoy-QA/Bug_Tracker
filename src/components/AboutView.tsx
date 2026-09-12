@@ -10,18 +10,20 @@ import {
   CheckCircle2, 
   Award,
   Terminal,
-  Activity
+  Activity,
+  Database
 } from 'lucide-react';
 
 export const AboutView: React.FC = () => {
   const specs = [
     { label: 'Application Name', value: 'Illusion_Dashboard', icon: Layers, highlight: true },
     { label: 'Company Name', value: 'Illusio Tech', icon: Building2, highlight: true },
-    { label: 'App Version', value: '4.1.0', icon: Award, highlight: true },
-    { label: 'Revision', value: '1215', icon: GitBranch, highlight: true },
+    { label: 'App Version', value: '4.1.1', icon: Award, highlight: true },
+    { label: 'Revision', value: '1251', icon: GitBranch, highlight: true },
+    { label: 'Database', value: 'Google Firebase Firestore (Real-Time)', icon: Database, highlight: true },
     { label: 'Release Channel', value: 'Enterprise Production (Stable)', icon: ShieldCheck },
     { label: 'Environment', value: 'Cloud Containerized Node/React Runtime', icon: Terminal },
-    { label: 'Engine', value: 'React 18 + TypeScript + Vite + Express', icon: Cpu },
+    { label: 'Engine', value: 'React 18 + TypeScript + Vite + Firebase', icon: Cpu },
     { label: 'Release Date', value: 'September 2026', icon: Calendar }
   ];
 
@@ -77,7 +79,7 @@ export const AboutView: React.FC = () => {
               Illusio Tech
             </span>
             <span className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5">
-              v4.1.0 (Rev. 1215)
+              v4.1.1 (Rev. 1251)
             </span>
           </div>
         </div>
@@ -148,7 +150,7 @@ export const AboutView: React.FC = () => {
           © {new Date().getFullYear()} Illusio Tech. All rights reserved.
         </p>
         <p className="text-[11px]">
-          Illusion_Dashboard · Version 4.1.0 · Build Revision 1215 · Enterprise QA Suite
+          Illusion_Dashboard · Version 4.1.1 · Build Revision 1251 · Enterprise QA Suite
         </p>
       </div>
     </div>

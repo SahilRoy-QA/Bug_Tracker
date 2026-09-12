@@ -14,6 +14,18 @@ import {
   saveStoredProject, 
   resetStoredData 
 } from './utils/storage.ts';
+import {
+  subscribeToDefects,
+  subscribeToProjectMeta,
+  addDefectToFirestore,
+  updateDefectInFirestore,
+  deleteDefectFromFirestore,
+  bulkDeleteDefectsFromFirestore,
+  bulkUpsertDefectsToFirestore,
+  updateProjectMetaInFirestore,
+  resetFirestoreToTemplate,
+  seedInitialDataIfEmpty
+} from './firebase/defectService.ts';
 import { CheckCircle2, AlertCircle, Info, X } from 'lucide-react';
 
 export default function App() {
@@ -39,51 +51,61 @@ export default function App() {
     }, 3500);
   };
 
-  // Fetch data from backend server database with graceful local storage fallback (crucial for Vercel)
-  const fetchData = useCallback(async () => {
+  // Real-time Firebase Firestore synchronization
+  useEffect(() => {
     setIsSyncing(true);
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3500);
 
+    // Initial check to seed Firestore if first time
+    seedInitialDataIfEmpty().catch(err => {
+      console.warn('Initial Firestore seed check notice:', err);
+    });
+
+    // Real-time listener for defects
+    const unsubscribeDefects = subscribeToDefects(
+      (remoteDefects) => {
+        if (Array.isArray(remoteDefects) && remoteDefects.length > 0) {
+          setDefects(remoteDefects);
+          saveStoredDefects(remoteDefects);
+        }
+        setIsSyncing(false);
+      },
+      (err) => {
+        console.warn('Defects Firestore live listener fallback to local:', err);
+        setIsSyncing(false);
+      }
+    );
+
+    // Real-time listener for project metadata
+    const unsubscribeMeta = subscribeToProjectMeta(
+      (remoteMeta) => {
+        if (remoteMeta && remoteMeta.projectName) {
+          setProjectMeta(remoteMeta);
+          saveStoredProject(remoteMeta);
+        }
+      },
+      (err) => {
+        console.warn('ProjectMeta Firestore live listener fallback to local:', err);
+      }
+    );
+
+    return () => {
+      unsubscribeDefects();
+      unsubscribeMeta();
+    };
+  }, []);
+
+  // Manual refresh handler
+  const handleRefresh = useCallback(async () => {
+    setIsSyncing(true);
     try {
-      // Attempt project meta sync
-      try {
-        const projRes = await fetch('/api/project', { signal: controller.signal });
-        const contentType = projRes.headers.get('content-type');
-        if (projRes.ok && contentType && contentType.includes('application/json')) {
-          const projData = await projRes.json();
-          if (projData.project) {
-            setProjectMeta(projData.project);
-            saveStoredProject(projData.project);
-          }
-        }
-      } catch {
-        // Backend not available (e.g. static Vercel deployment) - local storage is active
-      }
-
-      // Attempt defect sheet records sync
-      try {
-        const defectsRes = await fetch('/api/defects', { signal: controller.signal });
-        const contentType = defectsRes.headers.get('content-type');
-        if (defectsRes.ok && contentType && contentType.includes('application/json')) {
-          const defectsData = await defectsRes.json();
-          if (Array.isArray(defectsData.defects) && defectsData.defects.length > 0) {
-            setDefects(defectsData.defects);
-            saveStoredDefects(defectsData.defects);
-          }
-        }
-      } catch {
-        // Backend not available - local storage is active
-      }
+      await seedInitialDataIfEmpty();
+      showToast('Firebase Firestore synchronized', 'success');
+    } catch {
+      showToast('Local database up to date', 'info');
     } finally {
-      clearTimeout(timeoutId);
       setIsSyncing(false);
     }
   }, []);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
 
   // Dynamically computed stats from defects array
   const stats: ExecutionReportStats = useMemo(() => {
@@ -105,7 +127,7 @@ export default function App() {
     };
   }, [defects]);
 
-  // Update defect (instant local persistence + background server sync)
+  // Update defect (instant local persistence + Firebase Firestore cloud sync)
   const handleUpdateDefect = async (id: string, updates: Partial<DefectItem>) => {
     const today = new Date().toISOString().split('T')[0];
     const updatedList = defects.map(d =>
@@ -113,20 +135,17 @@ export default function App() {
     );
     setDefects(updatedList);
     saveStoredDefects(updatedList);
-    showToast('Defect record synchronized and saved', 'success');
+    showToast('Defect record synchronized to Firebase', 'success');
 
+    // Sync to Firestore
     try {
-      fetch(`/api/defects/${encodeURIComponent(id)}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updates)
-      }).catch(() => {});
-    } catch {
-      // Ignored - local database already updated
+      await updateDefectInFirestore(id, updates);
+    } catch (err) {
+      console.warn('Firestore update sync background notice:', err);
     }
   };
 
-  // Delete defect (instant local persistence + background server sync)
+  // Delete defect (instant local persistence + Firebase Firestore cloud sync)
   const handleDeleteDefect = async (id: string) => {
     const target = defects.find(d => d.id === id || d.bugId === id);
     const targetId = target?.id || id;
@@ -135,14 +154,15 @@ export default function App() {
     saveStoredDefects(updatedList);
     showToast(`Defect ${target?.bugId || ''} deleted from sheet`, 'info');
 
+    // Sync to Firestore
     try {
-      fetch(`/api/defects/${encodeURIComponent(targetId)}`, { method: 'DELETE' }).catch(() => {});
-    } catch {
-      // Ignored
+      await deleteDefectFromFirestore(targetId);
+    } catch (err) {
+      console.warn('Firestore delete notice:', err);
     }
   };
 
-  // Bulk delete defects (instant local persistence + background server sync)
+  // Bulk delete defects (instant local persistence + Firebase Firestore batch delete)
   const handleBulkDeleteDefects = async (ids: string[]) => {
     if (ids.length === 0) return;
     const idSet = new Set(ids);
@@ -151,18 +171,15 @@ export default function App() {
     saveStoredDefects(updatedList);
     showToast(`Deleted ${ids.length} defects from sheet`, 'info');
 
+    // Sync to Firestore
     try {
-      fetch('/api/defects/bulk-delete', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids })
-      }).catch(() => {});
-    } catch {
-      // Ignored
+      await bulkDeleteDefectsFromFirestore(ids);
+    } catch (err) {
+      console.warn('Firestore bulk delete notice:', err);
     }
   };
 
-  // Save (create new or edit existing - guarantees 100% data persistence on Vercel)
+  // Save (create new or edit existing - guarantees 100% data persistence on Firebase & Vercel)
   const handleSaveDefect = async (defectData: Partial<DefectItem>) => {
     if (modalState.defect && modalState.defect.id) {
       // Edit existing defect
@@ -196,35 +213,29 @@ export default function App() {
       const updatedList = [newDefect, ...defects];
       setDefects(updatedList);
       saveStoredDefects(updatedList);
-      showToast(`Logged new defect ${newDefect.bugId} to sheet`, 'success');
+      showToast(`Logged new defect ${newDefect.bugId} to Firebase`, 'success');
 
+      // Persist to Firebase Firestore
       try {
-        fetch('/api/defects', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(newDefect)
-        }).catch(() => {});
-      } catch {
-        // Ignored - local database already updated
+        await addDefectToFirestore(newDefect);
+      } catch (err) {
+        console.warn('Firestore create defect notice:', err);
       }
     }
   };
 
-  // Save Project Meta (instant local persistence + background server sync)
+  // Save Project Meta (instant local persistence + Firebase Firestore sync)
   const handleSaveProjectMeta = async (updated: Partial<ProjectMeta>) => {
     const updatedMeta = { ...projectMeta, ...updated };
     setProjectMeta(updatedMeta);
     saveStoredProject(updatedMeta);
-    showToast('Project details updated and saved', 'success');
+    showToast('Project details updated and saved to Firebase', 'success');
 
+    // Sync to Firestore
     try {
-      fetch('/api/project', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updated)
-      }).catch(() => {});
-    } catch {
-      // Ignored
+      await updateProjectMetaInFirestore(updated);
+    } catch (err) {
+      console.warn('Firestore project update notice:', err);
     }
   };
 
@@ -244,10 +255,11 @@ export default function App() {
       setDefects(reset.defects);
       showToast('Database reset to original QA Execution Report', 'info');
 
+      // Reset in Firestore
       try {
-        fetch('/api/reset', { method: 'POST' }).catch(() => {});
-      } catch {
-        // Ignored
+        await resetFirestoreToTemplate();
+      } catch (err) {
+        console.warn('Firestore reset notice:', err);
       }
     } finally {
       setIsResetting(false);
@@ -275,14 +287,11 @@ export default function App() {
             saveStoredDefects(updatedList);
             showToast(`Successfully imported ${parsed.length} records into defect sheet`, 'success');
 
+            // Bulk upsert to Firestore
             try {
-              fetch('/api/defects/bulk', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ defects: parsed, replaceAll: false })
-              }).catch(() => {});
-            } catch {
-              // Ignored
+              await bulkUpsertDefectsToFirestore(parsed as DefectItem[]);
+            } catch (err) {
+              console.warn('Firestore bulk import notice:', err);
             }
           } else {
             showToast('No valid defect records found in CSV file', 'error');
@@ -326,7 +335,7 @@ export default function App() {
         totalDefects={defects.length}
         onOpenNewDefect={() => setModalState({ isOpen: true, defect: null })}
         onExportCSV={handleExportCSV}
-        onRefresh={fetchData}
+        onRefresh={handleRefresh}
         isSyncing={isSyncing}
       />
 

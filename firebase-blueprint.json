@@ -1,0 +1,61 @@
+{
+  "entities": {
+    "Defect": {
+      "title": "Defect",
+      "description": "A QA defect or test execution issue tracking item",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique defect identifier" },
+        "bugId": { "type": "string", "description": "Display Bug ID e.g. BUG-101" },
+        "testCaseId": { "type": "string", "description": "Associated test case ID" },
+        "title": { "type": "string", "description": "Defect summary / title" },
+        "module": { "type": "string", "description": "Target module or feature area" },
+        "testExecutionStatus": { "type": "string", "description": "Execution status: Passed, Failed, Blocked, Pending" },
+        "defectStatus": { "type": "string", "description": "Defect lifecycle state: Open, In Progress, Resolved, Closed" },
+        "severity": { "type": "string", "description": "Severity rating: Critical, High, Medium, Low" },
+        "priority": { "type": "string", "description": "Priority tier: P1, P2, P3, P4" },
+        "assignedTo": { "type": "string", "description": "Assigned engineer or developer" },
+        "reportedBy": { "type": "string", "description": "QA engineer who reported the issue" },
+        "environment": { "type": "string", "description": "Test environment and browser specifications" },
+        "stepsToReproduce": { "type": "string", "description": "Reproduction steps" },
+        "expectedResult": { "type": "string", "description": "Expected behavior" },
+        "actualResult": { "type": "string", "description": "Actual observed outcome" },
+        "driveLink": { "type": "string", "description": "Google Drive link to artifacts and screenshots" },
+        "githubLink": { "type": "string", "description": "GitHub issue or PR URL" },
+        "createdDate": { "type": "string", "description": "Creation date ISO string" },
+        "updatedDate": { "type": "string", "description": "Last update date ISO string" }
+      },
+      "required": ["id", "bugId", "title", "testExecutionStatus", "defectStatus", "severity", "priority"]
+    },
+    "ProjectMeta": {
+      "title": "ProjectMeta",
+      "description": "Project configuration and QA metadata",
+      "type": "object",
+      "properties": {
+        "projectName": { "type": "string", "description": "Name of the target project" },
+        "projectLink": { "type": "string", "description": "URL to application under test" },
+        "assignedQAMembers": {
+          "type": "array",
+          "description": "List of QA engineers assigned to project"
+        },
+        "estimatedStartDate": { "type": "string", "description": "Start date string" },
+        "estimatedEndDate": { "type": "string", "description": "End date string" },
+        "driveLink": { "type": "string", "description": "Project Google Drive folder" },
+        "githubRepoLink": { "type": "string", "description": "Source repository link" },
+        "testSuite": { "type": "string", "description": "Target test suite title" },
+        "version": { "type": "string", "description": "Software build version" }
+      },
+      "required": ["projectName"]
+    }
+  },
+  "firestore": {
+    "/defects/{defectId}": {
+      "schema": "Defect",
+      "description": "QA defect tracker and test execution records collection"
+    },
+    "/config/{configId}": {
+      "schema": "ProjectMeta",
+      "description": "Project settings and testing metadata collection"
+    }
+  }
+}

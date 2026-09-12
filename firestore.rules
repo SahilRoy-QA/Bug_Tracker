@@ -1,0 +1,31 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isValidDefect(data) {
+      return data.title is string && data.title.size() > 0 && data.title.size() < 500
+        && data.bugId is string && data.bugId.size() > 0
+        && data.testExecutionStatus is string
+        && data.defectStatus is string
+        && data.severity is string
+        && data.priority is string;
+    }
+
+    function isValidProjectMeta(data) {
+      return data.projectName is string && data.projectName.size() > 0 && data.projectName.size() < 200;
+    }
+
+    match /defects/{defectId} {
+      allow read: if true;
+      allow create: if isValidDefect(request.resource.data);
+      allow update: if isValidDefect(request.resource.data);
+      allow delete: if true;
+    }
+
+    match /config/{configId} {
+      allow read: if true;
+      allow create: if isValidProjectMeta(request.resource.data);
+      allow update: if isValidProjectMeta(request.resource.data);
+      allow delete: if true;
+    }
+  }
+}
