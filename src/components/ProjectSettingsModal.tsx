@@ -77,8 +77,8 @@ export const ProjectSettingsView: React.FC<ProjectSettingsViewProps> = ({
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Row 1: Name & Version */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Row 1: Name, Version & Revision */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 Project Name *
@@ -100,6 +100,20 @@ export const ProjectSettingsView: React.FC<ProjectSettingsViewProps> = ({
                 type="text"
                 value={formData.version}
                 onChange={e => setFormData({ ...formData, version: e.target.value })}
+                placeholder="4.2.0"
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Revision
+              </label>
+              <input
+                type="text"
+                value={formData.revision || ''}
+                onChange={e => setFormData({ ...formData, revision: e.target.value })}
+                placeholder="1401"
                 className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500"
               />
             </div>

@@ -111,7 +111,14 @@ export function subscribeToProjectMeta(
     metaDocRef,
     (snapshot) => {
       if (snapshot.exists()) {
-        onData(snapshot.data() as ProjectMeta);
+        const data = snapshot.data() as ProjectMeta;
+        if (data.version !== '4.2.0' || data.revision !== '1401') {
+          const updated = { ...data, version: '4.2.0', revision: '1401' };
+          setDoc(metaDocRef, updated, { merge: true }).catch(console.warn);
+          onData(updated);
+        } else {
+          onData(data);
+        }
       } else {
         // If not found, write default
         setDoc(metaDocRef, initialProjectMeta).catch((err) =>

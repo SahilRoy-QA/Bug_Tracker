@@ -3,13 +3,14 @@ import { DefectItem, ProjectMeta } from '../types.ts';
 export const initialProjectMeta: ProjectMeta = {
   projectName: 'Enterprise Core HR Portal',
   projectLink: 'https://demo.app.internal/auth/login',
-  assignedQAMembers: ['Sahil Roy (Lead QA)', 'Priya Sharma (SDET)', 'Alex Morgan (QA Analyst)'],
+  assignedQAMembers: ['Sahil Roy (Lead QA)', 'Jeet Mondal (QA Engineer)', 'Priya Sharma (SDET)', 'Alex Morgan (QA Analyst)'],
   estimatedStartDate: '2026-07-06',
   estimatedEndDate: '2026-07-06',
   driveLink: 'https://drive.google.com/drive/folders/qa-test-evidence-2026',
   githubRepoLink: 'https://github.com/company/core-hr-app',
   testSuite: 'Sprint 24 - Core HR & Access Control Regression Suite',
-  version: '5.8.0 build. 400'
+  version: '4.2.0',
+  revision: '1401'
 };
 
 export const initialDefects: DefectItem[] = [

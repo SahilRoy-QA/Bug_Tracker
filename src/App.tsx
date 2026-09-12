@@ -5,6 +5,8 @@ import { DefectSheetView } from './components/DefectSheetView.tsx';
 import { DefectModal } from './components/DefectModal.tsx';
 import { ProjectSettingsView } from './components/ProjectSettingsModal.tsx';
 import { AboutView } from './components/AboutView.tsx';
+import { LoginPage } from './components/LoginPage.tsx';
+import { TestingLoadingScreen } from './components/TestingLoadingScreen.tsx';
 import { DefectItem, ProjectMeta, ExecutionReportStats } from './types.ts';
 import { exportDefectsToCSV, parseCSVToDefects } from './utils/csvHelper.ts';
 import { 
@@ -35,6 +37,47 @@ export default function App() {
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [sheetExecutionFilter, setSheetExecutionFilter] = useState<string>('All');
   
+  // Authentication State
+  const [currentUser, setCurrentUser] = useState<string | null>(() => {
+    try {
+      return sessionStorage.getItem('illusion_qa_user');
+    } catch {
+      return null;
+    }
+  });
+  const [pendingUser, setPendingUser] = useState<string>('sahil_roy');
+  const [authStage, setAuthStage] = useState<'login' | 'loading' | 'authenticated'>(() => {
+    try {
+      return sessionStorage.getItem('illusion_qa_user') ? 'authenticated' : 'login';
+    } catch {
+      return 'login';
+    }
+  });
+
+  const handleLoginSuccess = (user: string) => {
+    setPendingUser(user);
+    setAuthStage('loading');
+  };
+
+  const handleLoadingComplete = () => {
+    const validUser = pendingUser || 'sahil_roy';
+    setCurrentUser(validUser);
+    try {
+      sessionStorage.setItem('illusion_qa_user', validUser);
+    } catch {}
+    setAuthStage('authenticated');
+    showToast(`Welcome @${validUser} · QA Test Execution Suite ready`, 'success');
+  };
+
+  const handleLogout = () => {
+    try {
+      sessionStorage.removeItem('illusion_qa_user');
+    } catch {}
+    setCurrentUser(null);
+    setAuthStage('login');
+    showToast('Signed out of QA Dashboard', 'info');
+  };
+
   // Modal state
   const [modalState, setModalState] = useState<{ isOpen: boolean; defect: DefectItem | null }>({
     isOpen: false,
@@ -312,6 +355,21 @@ export default function App() {
     setActiveTab('sheet');
   };
 
+  // Render Login Gate before accessing dashboard
+  if (authStage === 'login') {
+    return <LoginPage onLoginSuccess={handleLoginSuccess} />;
+  }
+
+  // Render Testing-themed Loading Animation after login
+  if (authStage === 'loading') {
+    return (
+      <TestingLoadingScreen
+        username={pendingUser}
+        onComplete={handleLoadingComplete}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors">
       {/* Toast Notification */}
@@ -337,6 +395,8 @@ export default function App() {
         onExportCSV={handleExportCSV}
         onRefresh={handleRefresh}
         isSyncing={isSyncing}
+        currentUser={currentUser || 'sahil_roy'}
+        onLogout={handleLogout}
       />
 
       {/* Main Content Area */}
@@ -348,6 +408,8 @@ export default function App() {
             stats={stats}
             onNavigateToSheet={handleNavigateToSheetWithFilter}
             onSelectDefect={(defect) => setModalState({ isOpen: true, defect })}
+            currentUser={currentUser || 'sahil_roy'}
+            onLogout={handleLogout}
           />
         )}
 

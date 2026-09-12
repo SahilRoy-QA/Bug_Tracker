@@ -12,7 +12,10 @@ import {
   ExternalLink, 
   ArrowRight,
   ShieldAlert,
-  Flame
+  Flame,
+  LogOut,
+  User,
+  ShieldCheck
 } from 'lucide-react';
 import { 
   PieChart, 
@@ -35,6 +38,8 @@ interface DashboardViewProps {
   stats: ExecutionReportStats;
   onNavigateToSheet: (filter?: string) => void;
   onSelectDefect: (defect: DefectItem) => void;
+  currentUser?: string;
+  onLogout?: () => void;
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
@@ -42,7 +47,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   defects,
   stats,
   onNavigateToSheet,
-  onSelectDefect
+  onSelectDefect,
+  currentUser = 'sahil_roy',
+  onLogout
 }) => {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
@@ -105,6 +112,44 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   return (
     <div className="space-y-6 pb-12">
+      {/* Top QA Engineer Session Bar with Prominent Logout */}
+      <div className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-5 py-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-950/70 border border-indigo-200 dark:border-indigo-800/60 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
+            <User className="w-4 h-4" />
+          </div>
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-bold text-sm text-slate-900 dark:text-white">
+                {currentUser === 'jit_mondal' ? 'Jeet Mondal' : currentUser === 'sahil_roy' ? 'Sahil Roy' : currentUser}
+              </span>
+              <span className="font-mono text-xs text-indigo-600 dark:text-indigo-400 font-semibold bg-indigo-50 dark:bg-indigo-950/50 px-2 py-0.5 rounded-md border border-indigo-200 dark:border-indigo-800/40">
+                @{currentUser}
+              </span>
+              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                Active QA Session
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+              {currentUser === 'jit_mondal' ? 'QA Automation Engineer' : 'Lead Quality Engineer'} · Enterprise QA Dashboard Access
+            </p>
+          </div>
+        </div>
+
+        {onLogout && (
+          <button
+            onClick={onLogout}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:hover:bg-rose-900/50 dark:text-rose-300 border border-rose-200 dark:border-rose-900/60 text-xs font-semibold transition cursor-pointer shadow-xs hover:shadow group"
+            title="Log out from QA Dashboard"
+            aria-label="Log out from dashboard"
+          >
+            <LogOut className="w-4 h-4 text-rose-600 dark:text-rose-400 group-hover:scale-110 transition-transform" />
+            <span>Sign Out / Logout</span>
+          </button>
+        )}
+      </div>
+
       {/* Test Execution Status Report Banner */}
       <div className="bg-white dark:bg-gradient-to-r dark:from-slate-900 dark:via-slate-800 dark:to-indigo-950/70 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm dark:shadow-xl relative overflow-hidden transition-colors">
         <div className="absolute right-0 top-0 bottom-0 w-96 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none" />
@@ -116,7 +161,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 Official QA Execution Report
               </span>
               <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">
-                {projectMeta.version}
+                v{projectMeta.version}{projectMeta.revision ? ` (Rev. ${projectMeta.revision})` : ''}
               </span>
             </div>
             <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">

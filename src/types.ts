@@ -38,6 +38,7 @@ export interface ProjectMeta {
   githubRepoLink: string;
   testSuite: string;
   version: string;
+  revision?: string;
 }
 
 export interface ExecutionReportStats {
