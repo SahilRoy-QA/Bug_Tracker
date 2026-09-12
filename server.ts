@@ -180,14 +180,23 @@ app.put('/api/defects/:id', (req, res) => {
 
 app.delete('/api/defects/:id', (req, res) => {
   const { id } = req.params;
+  const decodedId = decodeURIComponent(id);
   const initialLength = store.defects.length;
-  store.defects = store.defects.filter(d => d.id !== id && d.bugId !== id);
+  store.defects = store.defects.filter(d => d.id !== decodedId && d.bugId !== decodedId && d.id !== id && d.bugId !== id);
 
-  if (store.defects.length === initialLength) {
-    res.status(404).json({ error: 'Defect item not found' });
+  persistStore();
+  res.json({ success: true, remaining: store.defects.length });
+});
+
+// Bulk delete endpoint
+app.post('/api/defects/bulk-delete', (req, res) => {
+  const { ids } = req.body;
+  if (!Array.isArray(ids) || ids.length === 0) {
+    res.status(400).json({ error: 'ids array required' });
     return;
   }
-
+  const idSet = new Set(ids);
+  store.defects = store.defects.filter(d => !idSet.has(d.id) && !idSet.has(d.bugId));
   persistStore();
   res.json({ success: true, remaining: store.defects.length });
 });

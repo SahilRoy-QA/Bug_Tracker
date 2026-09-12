@@ -8,7 +8,8 @@ import {
   FolderGit2, 
   FileText,
   Loader2,
-  Check
+  Check,
+  Trash2
 } from 'lucide-react';
 import { 
   DefectItem, 
@@ -23,6 +24,7 @@ interface DefectModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (defect: Partial<DefectItem>) => Promise<void>;
+  onDelete?: (id: string) => Promise<void>;
   defaultModule?: string;
   totalExisting: number;
 }
@@ -32,15 +34,21 @@ export const DefectModal: React.FC<DefectModalProps> = ({
   isOpen,
   onClose,
   onSave,
+  onDelete,
   defaultModule = 'Admin',
   totalExisting
 }) => {
   const [formData, setFormData] = useState<Partial<DefectItem>>({});
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
   const [isAnalyzingAI, setIsAnalyzingAI] = useState(false);
   const [aiSuggestion, setAiSuggestion] = useState<any>(null);
 
   useEffect(() => {
+    setValidationError(null);
+    setIsConfirmingDelete(false);
     if (defect) {
       setFormData(defect);
     } else {
@@ -72,15 +80,28 @@ export const DefectModal: React.FC<DefectModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.title?.trim()) {
-      alert('Please provide a Defect Summary / Title');
+      setValidationError('Please provide a Defect Summary / Title');
       return;
     }
+    setValidationError(null);
     setIsSaving(true);
     try {
       await onSave(formData);
       onClose();
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!defect?.id || !onDelete) return;
+    setIsDeleting(true);
+    try {
+      await onDelete(defect.id);
+      onClose();
+    } finally {
+      setIsDeleting(false);
+      setIsConfirmingDelete(false);
     }
   };
 
@@ -242,10 +263,18 @@ export const DefectModal: React.FC<DefectModalProps> = ({
               type="text"
               required
               value={formData.title || ''}
-              onChange={e => setFormData({ ...formData, title: e.target.value })}
-              placeholder="Concise, descriptive summary of the defect"
-              className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500"
+              onChange={e => {
+                setFormData({ ...formData, title: e.target.value });
+                if (validationError) setValidationError(null);
+              }}
+              placeholder="e.g. System throws 500 error when applying leave without mandatory reason field"
+              className={`w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border ${validationError ? 'border-rose-500 ring-1 ring-rose-500/30' : 'border-slate-200 dark:border-slate-700'} rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500`}
             />
+            {validationError && (
+              <p className="text-[11px] text-rose-600 dark:text-rose-400 font-medium mt-1">
+                {validationError}
+              </p>
+            )}
           </div>
 
           {/* Row 3: Statuses & Severities */}
@@ -432,32 +461,86 @@ export const DefectModal: React.FC<DefectModalProps> = ({
         </form>
 
         {/* Modal Footer */}
-        <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-3 bg-slate-50/80 dark:bg-slate-800/40">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition"
-          >
-            Cancel
-          </button>
+        <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3 bg-slate-50/80 dark:bg-slate-800/40">
+          {/* Delete Action (only if editing existing defect) */}
+          {defect && onDelete ? (
+            <div>
+              {isConfirmingDelete ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold text-rose-600 dark:text-rose-400">
+                    Confirm delete?
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleDelete}
+                    disabled={isDeleting}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-600 hover:bg-rose-500 text-white shadow-xs transition disabled:opacity-50"
+                  >
+                    {isDeleting ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>Deleting...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Yes, Delete</span>
+                      </>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsConfirmingDelete(false)}
+                    disabled={isDeleting}
+                    className="px-2.5 py-1.5 rounded-lg text-xs text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setIsConfirmingDelete(true)}
+                  disabled={isSaving || isDeleting}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-rose-200 dark:border-rose-900/40 transition"
+                  title="Permanently remove this defect"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Delete Defect</span>
+                </button>
+              )}
+            </div>
+          ) : (
+            <div />
+          )}
 
-          <button
-            onClick={handleSubmit}
-            disabled={isSaving}
-            className="inline-flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-600/20 transition disabled:opacity-50"
-          >
-            {isSaving ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Saving to Database...</span>
-              </>
-            ) : (
-              <>
-                <Save className="w-4 h-4" />
-                <span>{defect ? 'Update Record' : 'Save to Defect Sheet'}</span>
-              </>
-            )}
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition"
+            >
+              Cancel
+            </button>
+
+            <button
+              onClick={handleSubmit}
+              disabled={isSaving || isDeleting}
+              className="inline-flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-600/20 transition disabled:opacity-50"
+            >
+              {isSaving ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Saving to Database...</span>
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4" />
+                  <span>{defect ? 'Update Record' : 'Save to Defect Sheet'}</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </div>
     </div>

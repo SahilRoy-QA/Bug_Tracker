@@ -20,7 +20,8 @@ import {
   ChevronDown,
   ArrowUpDown,
   FileSpreadsheet,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Loader2
 } from 'lucide-react';
 import { 
   DefectItem, 
@@ -34,6 +35,7 @@ interface DefectSheetViewProps {
   defects: DefectItem[];
   onUpdateDefect: (id: string, updates: Partial<DefectItem>) => Promise<void>;
   onDeleteDefect: (id: string) => Promise<void>;
+  onBulkDeleteDefects?: (ids: string[]) => Promise<void>;
   onAddDefect: () => void;
   onOpenDefectModal: (defect: DefectItem) => void;
   onExportCSV: () => void;
@@ -46,6 +48,7 @@ export const DefectSheetView: React.FC<DefectSheetViewProps> = ({
   defects,
   onUpdateDefect,
   onDeleteDefect,
+  onBulkDeleteDefects,
   onAddDefect,
   onOpenDefectModal,
   onExportCSV,
@@ -62,6 +65,9 @@ export const DefectSheetView: React.FC<DefectSheetViewProps> = ({
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isUpdating, setIsUpdating] = useState<string | null>(null);
   const [mobileLayout, setMobileLayout] = useState<'cards' | 'table'>('cards');
+  const [defectToDelete, setDefectToDelete] = useState<DefectItem | null>(null);
+  const [isConfirmingBulkDelete, setIsConfirmingBulkDelete] = useState(false);
+  const [isDeletingDefect, setIsDeletingDefect] = useState(false);
 
   // Available unique modules
   const modules = useMemo(() => {
@@ -173,6 +179,36 @@ export const DefectSheetView: React.FC<DefectSheetViewProps> = ({
       await onUpdateDefect(id, { testExecutionStatus: status });
     }
     setSelectedIds([]);
+  };
+
+  const handleConfirmSingleDelete = async () => {
+    if (!defectToDelete) return;
+    setIsDeletingDefect(true);
+    try {
+      await onDeleteDefect(defectToDelete.id);
+      setSelectedIds(prev => prev.filter(id => id !== defectToDelete.id));
+      setDefectToDelete(null);
+    } finally {
+      setIsDeletingDefect(false);
+    }
+  };
+
+  const handleConfirmBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    setIsDeletingDefect(true);
+    try {
+      if (onBulkDeleteDefects) {
+        await onBulkDeleteDefects(selectedIds);
+      } else {
+        for (const id of selectedIds) {
+          await onDeleteDefect(id);
+        }
+      }
+      setSelectedIds([]);
+      setIsConfirmingBulkDelete(false);
+    } finally {
+      setIsDeletingDefect(false);
+    }
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -382,6 +418,14 @@ export const DefectSheetView: React.FC<DefectSheetViewProps> = ({
                 Blocked
               </button>
               <button
+                onClick={() => setIsConfirmingBulkDelete(true)}
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-rose-600 hover:bg-rose-500 text-white font-medium transition shadow-xs"
+                title="Delete selected rows"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Delete Selected ({selectedIds.length})</span>
+              </button>
+              <button
                 onClick={() => setSelectedIds([])}
                 className="text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white px-2 py-1"
               >
@@ -441,13 +485,12 @@ export const DefectSheetView: React.FC<DefectSheetViewProps> = ({
                       <Edit3 className="w-3.5 h-3.5" />
                     </button>
                     <button
-                      onClick={() => {
-                        if (confirm(`Delete defect item "${d.bugId}"?`)) {
-                          onDeleteDefect(d.id);
-                        }
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDefectToDelete(d);
                       }}
-                      className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-slate-100 dark:hover:bg-slate-700/50"
-                      title="Delete"
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-slate-100 dark:hover:bg-slate-700/50 transition"
+                      title="Delete defect"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -838,10 +881,9 @@ export const DefectSheetView: React.FC<DefectSheetViewProps> = ({
                             <Edit3 className="w-3.5 h-3.5" />
                           </button>
                           <button
-                            onClick={() => {
-                              if (confirm(`Delete defect item "${d.bugId}"?`)) {
-                                onDeleteDefect(d.id);
-                              }
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDefectToDelete(d);
                             }}
                             className="p-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-500/20 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 transition"
                             title="Delete defect row"
@@ -874,6 +916,112 @@ export const DefectSheetView: React.FC<DefectSheetViewProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Delete Single Defect Confirmation Modal */}
+      {defectToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 dark:bg-slate-950/80 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div className="flex items-start gap-3.5">
+              <div className="w-10 h-10 rounded-xl bg-rose-100 dark:bg-rose-950/80 border border-rose-200 dark:border-rose-900/50 flex items-center justify-center shrink-0 text-rose-600 dark:text-rose-400">
+                <Trash2 className="w-5 h-5" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                  Delete Defect Record?
+                </h3>
+                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                  Are you sure you want to permanently delete <span className="font-mono font-bold text-indigo-600 dark:text-indigo-400">{defectToDelete.bugId}</span>: &quot;<span className="font-medium text-slate-800 dark:text-slate-200">{defectToDelete.title}</span>&quot;?
+                </p>
+                <p className="text-[11px] text-slate-400 dark:text-slate-500">
+                  This row will be removed from your defect sheet database and execution metrics.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100 dark:border-slate-800/80">
+              <button
+                type="button"
+                onClick={() => setDefectToDelete(null)}
+                disabled={isDeletingDefect}
+                className="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmSingleDelete}
+                disabled={isDeletingDefect}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-rose-600 hover:bg-rose-500 text-white shadow-md shadow-rose-600/20 transition disabled:opacity-50"
+              >
+                {isDeletingDefect ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Deleting...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Delete Record</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Delete Confirmation Modal */}
+      {isConfirmingBulkDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 dark:bg-slate-950/80 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div className="flex items-start gap-3.5">
+              <div className="w-10 h-10 rounded-xl bg-rose-100 dark:bg-rose-950/80 border border-rose-200 dark:border-rose-900/50 flex items-center justify-center shrink-0 text-rose-600 dark:text-rose-400">
+                <Trash2 className="w-5 h-5" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                  Delete {selectedIds.length} Defect Records?
+                </h3>
+                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                  Are you sure you want to permanently delete all <strong className="text-slate-900 dark:text-white font-mono">{selectedIds.length}</strong> selected rows from the database?
+                </p>
+                <p className="text-[11px] text-slate-400 dark:text-slate-500">
+                  This bulk action cannot be undone.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100 dark:border-slate-800/80">
+              <button
+                type="button"
+                onClick={() => setIsConfirmingBulkDelete(false)}
+                disabled={isDeletingDefect}
+                className="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmBulkDelete}
+                disabled={isDeletingDefect}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-rose-600 hover:bg-rose-500 text-white shadow-md shadow-rose-600/20 transition disabled:opacity-50"
+              >
+                {isDeletingDefect ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Deleting {selectedIds.length} items...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Delete All {selectedIds.length} Records</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

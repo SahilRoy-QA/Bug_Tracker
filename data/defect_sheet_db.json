@@ -12,9 +12,30 @@
     "driveLink": "https://drive.google.com/drive/folders/qa-test-evidence-2026",
     "githubRepoLink": "https://github.com/company/core-hr-app",
     "testSuite": "Sprint 24 - Core HR & Access Control Regression Suite",
-    "version": "v5.7.0-build.384"
+    "version": "5.8.0 build. 400"
   },
   "defects": [
+    {
+      "id": "defect-1789210232680",
+      "bugId": "BUG-119",
+      "testCaseId": "TC-019",
+      "title": "Sahil",
+      "module": "Admin",
+      "testExecutionStatus": "Failed",
+      "defectStatus": "Open",
+      "severity": "High",
+      "priority": "P2 - High",
+      "assignedTo": "Marcus Chen (Dev Lead)",
+      "reportedBy": "Sahil Roy (Lead QA)",
+      "environment": "QA Staging - Chrome v126 / Ubuntu 24.04",
+      "stepsToReproduce": "1. Navigate to target module\n2. Perform test step\n3. Observe result",
+      "expectedResult": "",
+      "actualResult": "",
+      "driveLink": "https://drive.google.com/drive/folders/qa-test-evidence-2026",
+      "githubLink": "",
+      "createdDate": "2026-09-12",
+      "updatedDate": "2026-09-12"
+    },
     {
       "id": "defect-1789207559448",
       "bugId": "Sahil",
@@ -128,7 +149,7 @@
       "module": "Admin / Integration",
       "testExecutionStatus": "Blocked",
       "defectStatus": "Open",
-      "severity": "High",
+      "severity": "Critical",
       "priority": "P2 - High",
       "assignedTo": "Backend Team",
       "reportedBy": "Alex Morgan",
@@ -139,28 +160,7 @@
       "driveLink": "https://drive.google.com/drive/folders/qa-Enterprise HR-test-evidence-2026",
       "githubLink": "",
       "createdDate": "2026-07-06",
-      "updatedDate": "2026-07-06"
-    },
-    {
-      "id": "defect-5",
-      "bugId": "BUG-105",
-      "testCaseId": "TC-005",
-      "title": "Custom Localization language pack upload (.po / .mo)",
-      "module": "Admin / Localization",
-      "testExecutionStatus": "Blocked",
-      "defectStatus": "Open",
-      "severity": "Low",
-      "priority": "P3 - Medium",
-      "assignedTo": "Alex Morgan",
-      "reportedBy": "Alex Morgan",
-      "environment": "QA Staging - Edge v126",
-      "stepsToReproduce": "Blocked: Admin settings module blocked by auth failure",
-      "expectedResult": "Uploaded language translation appears in UI selection",
-      "actualResult": "Blocked",
-      "driveLink": "https://drive.google.com/drive/folders/qa-Enterprise HR-test-evidence-2026",
-      "githubLink": "",
-      "createdDate": "2026-07-06",
-      "updatedDate": "2026-07-06"
+      "updatedDate": "2026-09-12"
     },
     {
       "id": "defect-6",
@@ -394,5 +394,5 @@
       "updatedDate": "2026-07-06"
     }
   ],
-  "lastUpdated": "2026-09-12T10:05:59.448Z"
+  "lastUpdated": "2026-09-12T10:57:05.193Z"
 }
