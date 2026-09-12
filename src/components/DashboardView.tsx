@@ -15,7 +15,8 @@ import {
   Flame,
   LogOut,
   User,
-  ShieldCheck
+  ShieldCheck,
+  KeyRound
 } from 'lucide-react';
 import { 
   PieChart, 
@@ -40,6 +41,7 @@ interface DashboardViewProps {
   onSelectDefect: (defect: DefectItem) => void;
   currentUser?: string;
   onLogout?: () => void;
+  onChangePassword?: () => void;
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
@@ -49,7 +51,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onNavigateToSheet,
   onSelectDefect,
   currentUser = 'sahil_roy',
-  onLogout
+  onLogout,
+  onChangePassword
 }) => {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
@@ -137,17 +140,31 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
         </div>
 
-        {onLogout && (
-          <button
-            onClick={onLogout}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:hover:bg-rose-900/50 dark:text-rose-300 border border-rose-200 dark:border-rose-900/60 text-xs font-semibold transition cursor-pointer shadow-xs hover:shadow group"
-            title="Log out from QA Dashboard"
-            aria-label="Log out from dashboard"
-          >
-            <LogOut className="w-4 h-4 text-rose-600 dark:text-rose-400 group-hover:scale-110 transition-transform" />
-            <span>Sign Out / Logout</span>
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {onChangePassword && (
+            <button
+              onClick={onChangePassword}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-xs font-semibold transition cursor-pointer shadow-xs"
+              title="Change your QA password"
+              aria-label="Change password"
+            >
+              <KeyRound className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+              <span>Change Password</span>
+            </button>
+          )}
+
+          {onLogout && (
+            <button
+              onClick={onLogout}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:hover:bg-rose-900/50 dark:text-rose-300 border border-rose-200 dark:border-rose-900/60 text-xs font-semibold transition cursor-pointer shadow-xs hover:shadow group"
+              title="Log out from QA Dashboard"
+              aria-label="Log out from dashboard"
+            >
+              <LogOut className="w-4 h-4 text-rose-600 dark:text-rose-400 group-hover:scale-110 transition-transform" />
+              <span>Sign Out / Logout</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Test Execution Status Report Banner */}

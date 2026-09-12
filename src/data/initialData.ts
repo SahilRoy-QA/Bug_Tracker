@@ -9,8 +9,8 @@ export const initialProjectMeta: ProjectMeta = {
   driveLink: 'https://drive.google.com/drive/folders/qa-test-evidence-2026',
   githubRepoLink: 'https://github.com/company/core-hr-app',
   testSuite: 'Sprint 24 - Core HR & Access Control Regression Suite',
-  version: '4.2.0',
-  revision: '1401'
+  version: '4.2.1',
+  revision: '1410'
 };
 
 export const initialDefects: DefectItem[] = [

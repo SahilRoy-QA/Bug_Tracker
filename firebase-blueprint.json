@@ -46,6 +46,20 @@
         "version": { "type": "string", "description": "Software build version" }
       },
       "required": ["projectName"]
+    },
+    "User": {
+      "title": "User",
+      "description": "Authenticated QA engineer credentials and profile",
+      "type": "object",
+      "properties": {
+        "username": { "type": "string", "description": "Unique username handle" },
+        "name": { "type": "string", "description": "Display name of QA member" },
+        "role": { "type": "string", "description": "Role title e.g. Lead QA Engineer" },
+        "password": { "type": "string", "description": "Hashed or secured password" },
+        "createdAt": { "type": "string", "description": "Account registration timestamp" },
+        "updatedAt": { "type": "string", "description": "Last update timestamp" }
+      },
+      "required": ["username", "name", "password"]
     }
   },
   "firestore": {
@@ -56,6 +70,10 @@
     "/config/{configId}": {
       "schema": "ProjectMeta",
       "description": "Project settings and testing metadata collection"
+    },
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles and authentication credentials"
     }
   }
 }

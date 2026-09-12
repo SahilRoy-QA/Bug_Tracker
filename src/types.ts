@@ -51,3 +51,12 @@ export interface ExecutionReportStats {
   failRate: number;
   blockedRate: number;
 }
+
+export interface QAUser {
+  username: string;
+  name: string;
+  role: string;
+  password?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}

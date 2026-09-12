@@ -100,7 +100,7 @@ export const ProjectSettingsView: React.FC<ProjectSettingsViewProps> = ({
                 type="text"
                 value={formData.version}
                 onChange={e => setFormData({ ...formData, version: e.target.value })}
-                placeholder="4.2.0"
+                placeholder="4.2.1"
                 className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500"
               />
             </div>
@@ -113,7 +113,7 @@ export const ProjectSettingsView: React.FC<ProjectSettingsViewProps> = ({
                 type="text"
                 value={formData.revision || ''}
                 onChange={e => setFormData({ ...formData, revision: e.target.value })}
-                placeholder="1401"
+                placeholder="1410"
                 className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500"
               />
             </div>

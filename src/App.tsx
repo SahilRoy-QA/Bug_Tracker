@@ -7,6 +7,7 @@ import { ProjectSettingsView } from './components/ProjectSettingsModal.tsx';
 import { AboutView } from './components/AboutView.tsx';
 import { LoginPage } from './components/LoginPage.tsx';
 import { TestingLoadingScreen } from './components/TestingLoadingScreen.tsx';
+import { ChangePasswordModal } from './components/ChangePasswordModal.tsx';
 import { DefectItem, ProjectMeta, ExecutionReportStats } from './types.ts';
 import { exportDefectsToCSV, parseCSVToDefects } from './utils/csvHelper.ts';
 import { 
@@ -28,6 +29,7 @@ import {
   resetFirestoreToTemplate,
   seedInitialDataIfEmpty
 } from './firebase/defectService.ts';
+import { seedUsersIfEmpty } from './firebase/authService.ts';
 import { CheckCircle2, AlertCircle, Info, X } from 'lucide-react';
 
 export default function App() {
@@ -79,6 +81,7 @@ export default function App() {
   };
 
   // Modal state
+  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState<boolean>(false);
   const [modalState, setModalState] = useState<{ isOpen: boolean; defect: DefectItem | null }>({
     isOpen: false,
     defect: null
@@ -101,6 +104,9 @@ export default function App() {
     // Initial check to seed Firestore if first time
     seedInitialDataIfEmpty().catch(err => {
       console.warn('Initial Firestore seed check notice:', err);
+    });
+    seedUsersIfEmpty().catch(err => {
+      console.warn('Initial users seed check notice:', err);
     });
 
     // Real-time listener for defects
@@ -397,6 +403,7 @@ export default function App() {
         isSyncing={isSyncing}
         currentUser={currentUser || 'sahil_roy'}
         onLogout={handleLogout}
+        onChangePassword={() => setIsChangePasswordOpen(true)}
       />
 
       {/* Main Content Area */}
@@ -410,6 +417,7 @@ export default function App() {
             onSelectDefect={(defect) => setModalState({ isOpen: true, defect })}
             currentUser={currentUser || 'sahil_roy'}
             onLogout={handleLogout}
+            onChangePassword={() => setIsChangePasswordOpen(true)}
           />
         )}
 
@@ -449,6 +457,14 @@ export default function App() {
         onSave={handleSaveDefect}
         onDelete={handleDeleteDefect}
         totalExisting={defects.length}
+      />
+
+      {/* Change Password Modal */}
+      <ChangePasswordModal
+        isOpen={isChangePasswordOpen}
+        username={currentUser || 'sahil_roy'}
+        onClose={() => setIsChangePasswordOpen(false)}
+        onSuccess={() => showToast('Password updated successfully! Next login requires new password.', 'success')}
       />
 
       {/* Reset QA Template Confirmation Modal */}

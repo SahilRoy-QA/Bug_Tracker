@@ -112,8 +112,8 @@ export function subscribeToProjectMeta(
     (snapshot) => {
       if (snapshot.exists()) {
         const data = snapshot.data() as ProjectMeta;
-        if (data.version !== '4.2.0' || data.revision !== '1401') {
-          const updated = { ...data, version: '4.2.0', revision: '1401' };
+        if (data.version !== '4.2.1' || data.revision !== '1410') {
+          const updated = { ...data, version: '4.2.1', revision: '1410' };
           setDoc(metaDocRef, updated, { merge: true }).catch(console.warn);
           onData(updated);
         } else {
