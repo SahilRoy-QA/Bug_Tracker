@@ -9,7 +9,7 @@ export const initialProjectMeta: ProjectMeta = {
   tag: 'Core-HR-Regression',
   tags: ['Core-HR', 'Regression'],
   version: '5.1.0',
-  revision: '2501'
+  revision: '2502'
 };
 
 // Initialized to empty so users start logging bugs from zero as requested

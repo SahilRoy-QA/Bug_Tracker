@@ -409,7 +409,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                 Root Admin: {currentUser === 'sahil_roy' ? 'Sahil Roy' : currentUser}
               </span>
               <span className="text-xs font-mono text-slate-500 dark:text-slate-400">
-                v5.1.0 (Rev. 2501)
+                v{projectMeta.version || '5.1.0'} (Rev. {projectMeta.revision || '2502'})
               </span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white mt-1">
@@ -1131,7 +1131,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                     required
                     value={projectForm.version}
                     onChange={e => setProjectForm({ ...projectForm, version: e.target.value })}
-                    placeholder="5.0.0"
+                    placeholder="5.1.0"
                     className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500"
                   />
                 </div>
@@ -1145,7 +1145,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                     required
                     value={projectForm.revision || ''}
                     onChange={e => setProjectForm({ ...projectForm, revision: e.target.value })}
-                    placeholder="2500"
+                    placeholder="2502"
                     className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500"
                   />
                 </div>
@@ -1311,7 +1311,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold transition cursor-pointer"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
-                <span>Reset All Project Data to Clean v5.0.0 Template</span>
+                <span>Reset All Project Data to Clean v5.1.0 Template</span>
               </button>
             </div>
           </div>
@@ -1673,10 +1673,10 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
               <RefreshCw className="w-6 h-6" />
             </div>
             <h3 className="text-base font-bold text-slate-900 dark:text-white">
-              Reset Project to v5.0.0 Template?
+              Reset Project to v5.1.0 Template?
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
-              This resets project details, dates, test suite names, and defect logs back to standard version 5.0.0 (Rev. 2500) initial state.
+              This resets project details, dates, test suite names, and defect logs back to standard version 5.1.0 (Rev. 2502) initial state.
             </p>
 
             <div className="mt-5 flex justify-center gap-2">
@@ -1692,7 +1692,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                 onClick={() => {
                   setConfirmTemplateResetOpen(false);
                   onResetTemplate();
-                  showNotice('Project reset to initial v5.0.0 template.', 'success');
+                  showNotice('Project reset to initial v5.1.0 template.', 'success');
                 }}
                 className="px-5 py-2 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white shadow-xs transition"
               >

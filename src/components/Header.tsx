@@ -111,33 +111,34 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Main Header Bar */}
         <div className="flex items-center justify-between py-2 sm:py-2.5 gap-2 sm:gap-4">
           {/* App Branding & Project Title - Click to go to Dashboard */}
-          <div className="flex items-center gap-1.5 sm:gap-2.5 min-w-0 shrink">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             <button
               onClick={() => setActiveTab('dashboard')}
-              className="flex items-center gap-1.5 sm:gap-2.5 text-left focus:outline-none group cursor-pointer min-w-0"
+              className="flex items-center gap-2 sm:gap-2.5 text-left focus:outline-none group cursor-pointer shrink-0"
               title="Go to Dashboard"
               aria-label="Go to Dashboard"
             >
               <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-indigo-50 dark:bg-indigo-950 border border-indigo-200 dark:border-indigo-500/30 flex items-center justify-center shrink-0 shadow-xs group-hover:border-indigo-400 dark:group-hover:border-indigo-400 group-hover:bg-indigo-100/50 dark:group-hover:bg-indigo-900/40 transition">
-                <Bug className="w-4 h-4 text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform" />
+                <Bug className="w-4 h-4 text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform shrink-0" />
               </div>
-              <div className="min-w-0">
+              <div className="shrink-0">
                 <div className="flex items-center gap-1.5">
-                  <h1 className="text-xs sm:text-sm md:text-base font-bold tracking-tight text-slate-900 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 truncate transition-colors">
+                  <h1 className="text-xs sm:text-sm md:text-base font-bold tracking-tight text-slate-900 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors whitespace-nowrap">
                     Illusion_Dashboard
                   </h1>
                 </div>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 hidden sm:block truncate">
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 hidden sm:block whitespace-nowrap">
                   Quality Engineering &amp; Defect Tracker by Illusio Tech
                 </p>
               </div>
             </button>
 
-            <div className="hidden md:flex items-center gap-1.5 shrink-0">
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700/80 truncate max-w-[120px]">
+            {/* Project & Live Badges: shown cleanly on xl screens where horizontal room is ample */}
+            <div className="hidden xl:flex items-center gap-2 shrink-0 border-l border-slate-200 dark:border-slate-800 pl-3">
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700/80 max-w-[200px] truncate" title={projectMeta.projectName}>
                 {projectMeta.projectName}
               </span>
-              <span className="hidden lg:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shadow-xs">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shadow-xs">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
                 <Database className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
                 Firestore Live
@@ -145,8 +146,8 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           </div>
 
-          {/* Desktop Navigation Tabs (Visible on md screens and larger) */}
-          <nav className="hidden md:flex items-center space-x-1">
+          {/* Desktop Navigation Tabs (Visible on lg screens and larger) */}
+          <nav className="hidden lg:flex items-center space-x-1">
             {navItems.map(item => {
               const Icon = item.icon;
               const isActive = activeTab === item.id;
@@ -181,7 +182,7 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Right Action Controls */}
           <div className="flex items-center gap-1.5 sm:gap-2 text-xs shrink-0">
             {/* Mobile / Tablet Navigation Button */}
-            <div className="relative md:hidden" ref={menuRef}>
+            <div className="relative lg:hidden" ref={menuRef}>
               <button
                 onClick={() => setIsMenuOpen(prev => !prev)}
                 className="inline-flex items-center gap-1 sm:gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 hover:text-slate-900 dark:hover:text-white font-medium transition border border-slate-200 dark:border-slate-700/80 dark:hover:border-slate-600 shadow-xs"
@@ -196,7 +197,7 @@ export const Header: React.FC<HeaderProps> = ({
               {/* Mobile Backdrop to click away safely */}
               {isMenuOpen && (
                 <div 
-                  className="fixed inset-0 bg-slate-950/40 backdrop-blur-xs z-40 md:hidden"
+                  className="fixed inset-0 bg-slate-950/40 backdrop-blur-xs z-40 lg:hidden"
                   onClick={() => setIsMenuOpen(false)}
                 />
               )}

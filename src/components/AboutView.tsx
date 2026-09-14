@@ -19,7 +19,7 @@ export const AboutView: React.FC = () => {
     { label: 'Application Name', value: 'Illusion_Dashboard', icon: Layers, highlight: true },
     { label: 'Company Name', value: 'Illusio Tech', icon: Building2, highlight: true },
     { label: 'App Version', value: '5.1.0', icon: Award, highlight: true },
-    { label: 'Revision', value: '2501', icon: GitBranch, highlight: true },
+    { label: 'Revision', value: '2502', icon: GitBranch, highlight: true },
     { label: 'Database', value: 'Google Firebase Firestore (Real-Time)', icon: Database, highlight: true },
     { label: 'Release Channel', value: 'Enterprise Production (Stable)', icon: ShieldCheck },
     { label: 'Environment', value: 'Cloud Containerized Node/React Runtime', icon: Terminal },
@@ -79,7 +79,7 @@ export const AboutView: React.FC = () => {
               Illusio Tech
             </span>
             <span className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5">
-              v5.0.0 (Rev. 2500)
+              v5.1.0 (Rev. 2502)
             </span>
           </div>
         </div>
@@ -150,7 +150,7 @@ export const AboutView: React.FC = () => {
           © {new Date().getFullYear()} Illusio Tech. All rights reserved.
         </p>
         <p className="text-[11px]">
-          Illusion_Dashboard · Version 5.0.0 · Build Revision 2500 · Enterprise QA Suite
+          Illusion_Dashboard · Version 5.1.0 · Build Revision 2502 · Enterprise QA Suite
         </p>
       </div>
     </div>

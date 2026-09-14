@@ -107,16 +107,17 @@ export default function App() {
     }
   }, [activeTab, currentUser]);
 
-  // Version and Revision synchronization to 5.1.0 (Rev. 2501)
+  // Version and Revision synchronization to 5.1.0 (Rev. 2502)
   useEffect(() => {
-    if (projectMeta.version !== '5.1.0' || projectMeta.revision !== '2501') {
+    if (projectMeta.version !== '5.1.0' || projectMeta.revision !== '2502') {
       const updatedMeta: ProjectMeta = {
         ...projectMeta,
         version: '5.1.0',
-        revision: '2501'
+        revision: '2502'
       };
       setProjectMeta(updatedMeta);
       saveStoredProject(updatedMeta);
+      updateProjectMetaInFirestore(updatedMeta).catch(console.warn);
     }
   }, [projectMeta.version, projectMeta.revision]);
 
