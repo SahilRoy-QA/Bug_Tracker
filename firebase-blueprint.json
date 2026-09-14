@@ -60,6 +60,24 @@
         "updatedAt": { "type": "string", "description": "Last update timestamp" }
       },
       "required": ["username", "name", "password"]
+    },
+    "ChatMessage": {
+      "title": "ChatMessage",
+      "description": "Real-time chat message exchanged between QA team members",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique message identifier" },
+        "channelId": { "type": "string", "description": "Channel ID e.g. general or direct message pair" },
+        "senderUsername": { "type": "string", "description": "Sender username handle" },
+        "senderName": { "type": "string", "description": "Sender display name" },
+        "senderRole": { "type": "string", "description": "Sender role title" },
+        "content": { "type": "string", "description": "Message text content" },
+        "timestamp": { "type": "string", "description": "ISO timestamp of message creation" },
+        "createdAt": { "type": "number", "description": "Epoch millisecond timestamp for ordering" },
+        "defectRef": { "type": "object", "description": "Optional linked defect reference" },
+        "reactions": { "type": "object", "description": "Emoji reactions map" }
+      },
+      "required": ["channelId", "senderUsername", "senderName", "content", "timestamp"]
     }
   },
   "firestore": {
@@ -74,6 +92,10 @@
     "/users/{userId}": {
       "schema": "User",
       "description": "User profiles and authentication credentials"
+    },
+    "/chat_messages/{messageId}": {
+      "schema": "ChatMessage",
+      "description": "Real-time team chat messages collection"
     }
   }
 }

@@ -19,6 +19,12 @@ service cloud.firestore {
         && data.password is string && data.password.size() >= 4;
     }
 
+    function isValidChatMessage(data) {
+      return data.content is string && data.content.size() > 0 && data.content.size() <= 4000
+        && data.senderUsername is string && data.senderUsername.size() > 0
+        && data.channelId is string && data.channelId.size() > 0;
+    }
+
     match /defects/{defectId} {
       allow read: if true;
       allow create: if isValidDefect(request.resource.data);
@@ -37,6 +43,13 @@ service cloud.firestore {
       allow read: if true;
       allow create: if isValidUser(request.resource.data);
       allow update: if isValidUser(request.resource.data);
+      allow delete: if true;
+    }
+
+    match /chat_messages/{messageId} {
+      allow read: if true;
+      allow create: if isValidChatMessage(request.resource.data);
+      allow update: if true;
       allow delete: if true;
     }
   }

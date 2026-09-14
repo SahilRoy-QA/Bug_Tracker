@@ -15,17 +15,19 @@ import {
   User,
   LogOut,
   KeyRound,
-  ShieldCheck
+  ShieldCheck,
+  MessageSquare
 } from 'lucide-react';
 import { ProjectMeta } from '../types.ts';
 import { useTheme } from '../context/ThemeContext.tsx';
 import { isUserAdmin } from '../utils/permissions.ts';
 
 interface HeaderProps {
-  activeTab: 'dashboard' | 'sheet' | 'about' | 'admin';
-  setActiveTab: (tab: 'dashboard' | 'sheet' | 'about' | 'admin') => void;
+  activeTab: 'dashboard' | 'sheet' | 'chat' | 'about' | 'admin';
+  setActiveTab: (tab: 'dashboard' | 'sheet' | 'chat' | 'about' | 'admin') => void;
   projectMeta: ProjectMeta;
   totalDefects: number;
+  unreadChatCount?: number;
   onOpenNewDefect: () => void;
   onExportCSV: () => void;
   onRefresh: () => void;
@@ -40,6 +42,7 @@ export const Header: React.FC<HeaderProps> = ({
   setActiveTab,
   projectMeta,
   totalDefects,
+  unreadChatCount = 0,
   onOpenNewDefect,
   onExportCSV,
   onRefresh,
@@ -87,6 +90,13 @@ export const Header: React.FC<HeaderProps> = ({
       icon: Table,
       badge: totalDefects,
       description: 'Full test execution & bug log'
+    },
+    {
+      id: 'chat' as const,
+      label: 'Team Chat',
+      icon: MessageSquare,
+      badge: unreadChatCount > 0 ? unreadChatCount : undefined,
+      description: 'Live QA team messaging & defect discussions'
     },
     ...(isAdmin ? [{
       id: 'admin' as const,

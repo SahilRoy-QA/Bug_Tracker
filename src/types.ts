@@ -79,3 +79,50 @@ export interface QAUser {
   createdAt?: string;
   updatedAt?: string;
 }
+
+export interface DefectReference {
+  id: string;
+  bugId: string;
+  title: string;
+  severity: DefectSeverity;
+  defectStatus: DefectStatus;
+}
+
+export interface ChatMessage {
+  id: string;
+  channelId: string;
+  senderUsername: string;
+  senderName: string;
+  senderRole?: string;
+  content: string;
+  timestamp: string;
+  createdAt: number;
+  defectRef?: DefectReference;
+  fileAttachment?: {
+    name: string;
+    url: string; // base64 or url
+    type?: string;
+    size?: string;
+  };
+  reactions?: Record<string, string[]>; // emoji -> array of usernames
+  replyTo?: {
+    id: string;
+    senderName: string;
+    content: string;
+  };
+  isSystem?: boolean;
+}
+
+export interface ChatChannel {
+  id: string;
+  name: string;
+  description: string;
+  type: 'public' | 'direct';
+  participants?: string[]; // for direct messages e.g. ['sahil_roy', 'jit_mondal']
+  lastMessage?: {
+    content: string;
+    timestamp: string;
+    senderName: string;
+  };
+  unreadCount?: number;
+}

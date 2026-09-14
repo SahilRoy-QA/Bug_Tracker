@@ -5,6 +5,8 @@ import { DefectSheetView } from './components/DefectSheetView.tsx';
 import { DefectModal } from './components/DefectModal.tsx';
 import { AdminDashboardView } from './components/AdminDashboardView.tsx';
 import { AboutView } from './components/AboutView.tsx';
+import { ChatView } from './components/ChatView.tsx';
+import { QuickChatFloatingButton } from './components/QuickChatFloatingButton.tsx';
 import { LoginPage } from './components/LoginPage.tsx';
 import { TestingLoadingScreen } from './components/TestingLoadingScreen.tsx';
 import { ChangePasswordModal } from './components/ChangePasswordModal.tsx';
@@ -38,15 +40,27 @@ import {
   seedInitialDataIfEmpty
 } from './firebase/defectService.ts';
 import { seedUsersIfEmpty } from './firebase/authService.ts';
+import { subscribeToAllMessages } from './firebase/chatService.ts';
 import { CheckCircle2, AlertCircle, Info, X } from 'lucide-react';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'sheet' | 'about' | 'admin'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'sheet' | 'chat' | 'about' | 'admin'>('dashboard');
   const [projectMeta, setProjectMeta] = useState<ProjectMeta>(() => loadStoredProject());
   const [defects, setDefects] = useState<DefectItem[]>(() => loadStoredDefects());
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [sheetExecutionFilter, setSheetExecutionFilter] = useState<string>('All');
   
+  // Real-time Chat Unread State
+  const [unreadChatCount, setUnreadChatCount] = useState<number>(0);
+  const [lastReadChatTime, setLastReadChatTime] = useState<number>(() => {
+    try {
+      const stored = sessionStorage.getItem('illusion_qa_chat_read');
+      return stored ? parseInt(stored, 10) : Date.now();
+    } catch {
+      return Date.now();
+    }
+  });
+
   // Authentication State
   const [currentUser, setCurrentUser] = useState<string | null>(() => {
     try {
@@ -203,6 +217,34 @@ export default function App() {
       setIsSyncing(false);
     }
   }, []);
+
+  // Real-time Chat Unread Management
+  useEffect(() => {
+    if (activeTab === 'chat') {
+      const now = Date.now();
+      setLastReadChatTime(now);
+      setUnreadChatCount(0);
+      try {
+        sessionStorage.setItem('illusion_qa_chat_read', now.toString());
+      } catch {}
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    const unsubscribe = subscribeToAllMessages((allMessages) => {
+      if (activeTab === 'chat') {
+        setUnreadChatCount(0);
+        return;
+      }
+      const count = allMessages.filter(
+        (m) => m.createdAt > lastReadChatTime && m.senderUsername.toLowerCase() !== (currentUser || '').toLowerCase()
+      ).length;
+      setUnreadChatCount(count);
+    });
+    return () => {
+      unsubscribe();
+    };
+  }, [activeTab, lastReadChatTime, currentUser]);
 
   // Dynamically computed stats from defects array
   const stats: ExecutionReportStats = useMemo(() => {
@@ -478,6 +520,7 @@ export default function App() {
         setActiveTab={setActiveTab}
         projectMeta={projectMeta}
         totalDefects={defects.length}
+        unreadChatCount={unreadChatCount}
         onOpenNewDefect={() => setModalState({ isOpen: true, defect: null })}
         onExportCSV={handleExportCSV}
         onRefresh={handleRefresh}
@@ -519,6 +562,23 @@ export default function App() {
           />
         )}
 
+        {activeTab === 'chat' && (
+          <ChatView
+            currentUser={currentUser || ''}
+            defects={defects}
+            onOpenDefectModal={(defect) => setModalState({ isOpen: true, defect })}
+            onNavigateToSheet={(defectId) => {
+              setActiveTab('sheet');
+              if (defectId) {
+                const targetDefect = defects.find(d => d.id === defectId || d.bugId === defectId);
+                if (targetDefect) {
+                  setModalState({ isOpen: true, defect: targetDefect });
+                }
+              }
+            }}
+          />
+        )}
+
         {activeTab === 'admin' && isUserAdmin(currentUser) && (
           <AdminDashboardView
             projectMeta={projectMeta}
@@ -535,6 +595,23 @@ export default function App() {
           <AboutView />
         )}
       </main>
+
+      {/* Global Application Footer */}
+      <footer className="border-t border-slate-200 dark:border-slate-800/80 py-4 mt-8 text-center text-xs text-slate-500 dark:text-slate-400">
+        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+          <span>© {new Date().getFullYear()} Illusio Tech · Illusion_Dashboard</span>
+          <span className="font-mono text-[11px] text-slate-400 dark:text-slate-500">
+            Version 5.1.0 · Revision 2502 · Enterprise QA Suite
+          </span>
+        </div>
+      </footer>
+
+      {/* Quick Access Floating Chat Button */}
+      <QuickChatFloatingButton
+        isActive={activeTab === 'chat'}
+        unreadCount={unreadChatCount}
+        onClick={() => setActiveTab('chat')}
+      />
 
       {/* Edit / New Defect Modal */}
       <DefectModal
