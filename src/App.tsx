@@ -22,7 +22,8 @@ import {
 import {
   canUserEditDefect,
   canUserDeleteDefect,
-  canUserCleanDatabase
+  canUserCleanDatabase,
+  isUserAdmin
 } from './utils/permissions.ts';
 import {
   subscribeToDefects,
@@ -54,7 +55,7 @@ export default function App() {
       return null;
     }
   });
-  const [pendingUser, setPendingUser] = useState<string>('sahil_roy');
+  const [pendingUser, setPendingUser] = useState<string>('');
   const [authStage, setAuthStage] = useState<'login' | 'loading' | 'authenticated'>(() => {
     try {
       return sessionStorage.getItem('illusion_qa_user') ? 'authenticated' : 'login';
@@ -65,15 +66,25 @@ export default function App() {
 
   const handleLoginSuccess = (user: string) => {
     setPendingUser(user);
+    if (!isUserAdmin(user)) {
+      setActiveTab('dashboard');
+    }
     setAuthStage('loading');
   };
 
   const handleLoadingComplete = () => {
-    const validUser = pendingUser || 'sahil_roy';
+    const validUser = pendingUser;
+    if (!validUser) {
+      setAuthStage('login');
+      return;
+    }
     setCurrentUser(validUser);
     try {
       sessionStorage.setItem('illusion_qa_user', validUser);
     } catch {}
+    if (!isUserAdmin(validUser)) {
+      setActiveTab('dashboard');
+    }
     setAuthStage('authenticated');
     showToast(`Welcome @${validUser} · QA Test Execution Suite ready`, 'success');
   };
@@ -83,9 +94,31 @@ export default function App() {
       sessionStorage.removeItem('illusion_qa_user');
     } catch {}
     setCurrentUser(null);
+    setPendingUser('');
+    setActiveTab('dashboard');
     setAuthStage('login');
     showToast('Signed out of QA Dashboard', 'info');
   };
+
+  // RBAC Access Guard: Ensure non-admin users cannot remain on admin tab
+  useEffect(() => {
+    if (activeTab === 'admin' && !isUserAdmin(currentUser)) {
+      setActiveTab('dashboard');
+    }
+  }, [activeTab, currentUser]);
+
+  // Version and Revision synchronization to 5.1.0 (Rev. 2501)
+  useEffect(() => {
+    if (projectMeta.version !== '5.1.0' || projectMeta.revision !== '2501') {
+      const updatedMeta: ProjectMeta = {
+        ...projectMeta,
+        version: '5.1.0',
+        revision: '2501'
+      };
+      setProjectMeta(updatedMeta);
+      saveStoredProject(updatedMeta);
+    }
+  }, [projectMeta.version, projectMeta.revision]);
 
   // Modal state
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState<boolean>(false);
@@ -448,7 +481,7 @@ export default function App() {
         onExportCSV={handleExportCSV}
         onRefresh={handleRefresh}
         isSyncing={isSyncing}
-        currentUser={currentUser || 'sahil_roy'}
+        currentUser={currentUser || ''}
         onLogout={handleLogout}
         onChangePassword={() => setIsChangePasswordOpen(true)}
       />
@@ -463,7 +496,7 @@ export default function App() {
             onNavigateToSheet={handleNavigateToSheetWithFilter}
             onSelectDefect={(defect) => setModalState({ isOpen: true, defect })}
             onNavigateToAdmin={() => setActiveTab('admin')}
-            currentUser={currentUser || 'sahil_roy'}
+            currentUser={currentUser || ''}
             onLogout={handleLogout}
             onChangePassword={() => setIsChangePasswordOpen(true)}
           />
@@ -481,18 +514,18 @@ export default function App() {
             onImportCSV={handleImportCSV}
             onResetTemplate={handleResetTemplate}
             initialExecutionFilter={sheetExecutionFilter}
-            currentUser={currentUser || 'sahil_roy'}
+            currentUser={currentUser || ''}
           />
         )}
 
-        {activeTab === 'admin' && (
+        {activeTab === 'admin' && isUserAdmin(currentUser) && (
           <AdminDashboardView
             projectMeta={projectMeta}
             onSaveMeta={handleSaveProjectMeta}
             onResetTemplate={handleResetTemplate}
             onClearAllDefects={handleResetTemplate}
             onNavigateBack={() => setActiveTab('dashboard')}
-            currentUser={currentUser || 'sahil_roy'}
+            currentUser={currentUser || ''}
             totalDefects={defects.length}
           />
         )}
@@ -510,13 +543,13 @@ export default function App() {
         onSave={handleSaveDefect}
         onDelete={handleDeleteDefect}
         totalExisting={defects.length}
-        currentUser={currentUser || 'sahil_roy'}
+        currentUser={currentUser || ''}
       />
 
       {/* Change Password Modal */}
       <ChangePasswordModal
         isOpen={isChangePasswordOpen}
-        username={currentUser || 'sahil_roy'}
+        username={currentUser || ''}
         onClose={() => setIsChangePasswordOpen(false)}
         onSuccess={() => showToast('Password updated successfully! Next login requires new password.', 'success')}
       />

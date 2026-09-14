@@ -18,8 +18,8 @@ export const AboutView: React.FC = () => {
   const specs = [
     { label: 'Application Name', value: 'Illusion_Dashboard', icon: Layers, highlight: true },
     { label: 'Company Name', value: 'Illusio Tech', icon: Building2, highlight: true },
-    { label: 'App Version', value: '5.0.0', icon: Award, highlight: true },
-    { label: 'Revision', value: '2500', icon: GitBranch, highlight: true },
+    { label: 'App Version', value: '5.1.0', icon: Award, highlight: true },
+    { label: 'Revision', value: '2501', icon: GitBranch, highlight: true },
     { label: 'Database', value: 'Google Firebase Firestore (Real-Time)', icon: Database, highlight: true },
     { label: 'Release Channel', value: 'Enterprise Production (Stable)', icon: ShieldCheck },
     { label: 'Environment', value: 'Cloud Containerized Node/React Runtime', icon: Terminal },

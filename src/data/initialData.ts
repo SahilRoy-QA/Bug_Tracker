@@ -8,8 +8,8 @@ export const initialProjectMeta: ProjectMeta = {
   estimatedEndDate: '2026-07-06',
   tag: 'Core-HR-Regression',
   tags: ['Core-HR', 'Regression'],
-  version: '5.0.0',
-  revision: '2500'
+  version: '5.1.0',
+  revision: '2501'
 };
 
 // Initialized to empty so users start logging bugs from zero as requested

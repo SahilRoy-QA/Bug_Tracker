@@ -44,7 +44,7 @@ export const Header: React.FC<HeaderProps> = ({
   onExportCSV,
   onRefresh,
   isSyncing,
-  currentUser = 'sahil_roy',
+  currentUser = '',
   onLogout,
   onChangePassword
 }) => {
