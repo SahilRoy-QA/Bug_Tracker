@@ -10,7 +10,7 @@ import { QuickChatFloatingButton } from './components/QuickChatFloatingButton.ts
 import { LoginPage } from './components/LoginPage.tsx';
 import { TestingLoadingScreen } from './components/TestingLoadingScreen.tsx';
 import { ChangePasswordModal } from './components/ChangePasswordModal.tsx';
-import { DefectItem, ProjectMeta, ExecutionReportStats } from './types.ts';
+import { DefectItem, ProjectMeta, ExecutionReportStats, UserSession } from './types.ts';
 import { exportDefectsToCSV, parseCSVToDefects } from './utils/csvHelper.ts';
 import { 
   loadStoredDefects, 
@@ -41,6 +41,12 @@ import {
 } from './firebase/defectService.ts';
 import { seedUsersIfEmpty } from './firebase/authService.ts';
 import { subscribeToAllMessages } from './firebase/chatService.ts';
+import {
+  startPresenceHeartbeat,
+  subscribeToOnlineSessions,
+  recordActivityLog,
+  markSessionInactive
+} from './firebase/presenceService.ts';
 import { CheckCircle2, AlertCircle, Info, X } from 'lucide-react';
 
 export default function App() {
@@ -49,6 +55,10 @@ export default function App() {
   const [defects, setDefects] = useState<DefectItem[]>(() => loadStoredDefects());
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [sheetExecutionFilter, setSheetExecutionFilter] = useState<string>('All');
+  
+  // Real-time Online Users Presence
+  const [onlineUsers, setOnlineUsers] = useState<UserSession[]>([]);
+  const [initialDmUser, setInitialDmUser] = useState<string | undefined>(undefined);
   
   // Real-time Chat Unread State
   const [unreadChatCount, setUnreadChatCount] = useState<number>(0);
@@ -101,11 +111,32 @@ export default function App() {
     }
     setAuthStage('authenticated');
     showToast(`Welcome @${validUser} · QA Test Execution Suite ready`, 'success');
+
+    // Audit log login event
+    recordActivityLog({
+      type: 'LOGIN',
+      username: validUser,
+      details: `User @${validUser} authenticated into QA Test Suite`,
+      severity: 'success',
+      metadata: { username: validUser, timestamp: new Date().toISOString() }
+    }).catch(console.warn);
   };
 
   const handleLogout = () => {
+    if (currentUser) {
+      markSessionInactive(currentUser).catch(console.warn);
+      recordActivityLog({
+        type: 'LOGOUT',
+        username: currentUser,
+        details: `User @${currentUser} signed out from session`,
+        severity: 'info',
+        metadata: { username: currentUser }
+      }).catch(console.warn);
+    }
     try {
       sessionStorage.removeItem('illusion_qa_user');
+      sessionStorage.removeItem('illusion_qa_role');
+      sessionStorage.removeItem('illusion_qa_name');
     } catch {}
     setCurrentUser(null);
     setPendingUser('');
@@ -113,6 +144,35 @@ export default function App() {
     setAuthStage('login');
     showToast('Signed out of QA Dashboard', 'info');
   };
+
+  // Real-time user presence heartbeat: emits heartbeat every 20s to Firestore
+  useEffect(() => {
+    if (!currentUser || authStage !== 'authenticated') {
+      return;
+    }
+
+    const role = sessionStorage.getItem('illusion_qa_role') || (isUserAdmin(currentUser) ? 'Administrator' : 'QA Engineer');
+    const displayName = sessionStorage.getItem('illusion_qa_name') || currentUser;
+
+    const stopHeartbeat = startPresenceHeartbeat(currentUser, role, displayName);
+
+    return () => {
+      stopHeartbeat();
+    };
+  }, [currentUser, authStage]);
+
+  // Subscribe to real-time active user sessions
+  useEffect(() => {
+    if (authStage !== 'authenticated') return;
+
+    const unsubscribe = subscribeToOnlineSessions((sessions) => {
+      setOnlineUsers(sessions);
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [authStage]);
 
   // RBAC Access Guard: Ensure non-admin users cannot remain on admin tab
   useEffect(() => {
@@ -286,6 +346,12 @@ export default function App() {
     // Sync to Firestore
     try {
       await updateDefectInFirestore(id, updates);
+      recordActivityLog(
+        currentUser || 'user',
+        'DEFECT_UPDATE',
+        `Updated defect ${target?.bugId || id}: ${updates.title || target?.title || 'Defect'}`,
+        { defectId: id, bugId: target?.bugId, updates }
+      ).catch(console.warn);
     } catch (err) {
       console.warn('Firestore update sync background notice:', err);
     }
@@ -308,6 +374,12 @@ export default function App() {
     // Sync to Firestore
     try {
       await deleteDefectFromFirestore(targetId);
+      recordActivityLog(
+        currentUser || 'admin',
+        'DEFECT_DELETE',
+        `Deleted defect ${target?.bugId || id}: ${target?.title || 'Defect'}`,
+        { defectId: targetId, bugId: target?.bugId }
+      ).catch(console.warn);
     } catch (err) {
       console.warn('Firestore delete notice:', err);
     }
@@ -381,6 +453,12 @@ export default function App() {
       // Persist to Firebase Firestore
       try {
         await addDefectToFirestore(newDefect);
+        recordActivityLog(
+          username,
+          'DEFECT_CREATE',
+          `Logged new defect ${newDefect.bugId} [${newDefect.severity}]: ${newDefect.title}`,
+          { defectId: newDefect.id, bugId: newDefect.bugId, severity: newDefect.severity }
+        ).catch(console.warn);
       } catch (err) {
         console.warn('Firestore create defect notice:', err);
       }
@@ -521,6 +599,7 @@ export default function App() {
         projectMeta={projectMeta}
         totalDefects={defects.length}
         unreadChatCount={unreadChatCount}
+        onlineUsersCount={onlineUsers.length}
         onOpenNewDefect={() => setModalState({ isOpen: true, defect: null })}
         onExportCSV={handleExportCSV}
         onRefresh={handleRefresh}
@@ -566,6 +645,8 @@ export default function App() {
           <ChatView
             currentUser={currentUser || ''}
             defects={defects}
+            onlineUsers={onlineUsers}
+            initialDmUser={initialDmUser}
             onOpenDefectModal={(defect) => setModalState({ isOpen: true, defect })}
             onNavigateToSheet={(defectId) => {
               setActiveTab('sheet');
@@ -588,6 +669,15 @@ export default function App() {
             onNavigateBack={() => setActiveTab('dashboard')}
             currentUser={currentUser || ''}
             totalDefects={defects.length}
+            onlineUsers={onlineUsers}
+            defects={defects}
+            onNavigateToChatWithUser={(targetUser) => {
+              setInitialDmUser(targetUser);
+              setActiveTab('chat');
+            }}
+            onOpenDefectModal={(targetDefect) => {
+              setModalState({ isOpen: true, defect: targetDefect });
+            }}
           />
         )}
 

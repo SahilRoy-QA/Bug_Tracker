@@ -126,3 +126,43 @@ export interface ChatChannel {
   };
   unreadCount?: number;
 }
+
+export interface UserSession {
+  sessionId: string;
+  username: string;
+  name: string;
+  role: string;
+  status: 'online' | 'offline';
+  loginTime: string; // ISO
+  lastActive: number; // epoch ms
+  userAgent?: string;
+  browser?: string;
+  os?: string;
+  currentPath?: string;
+}
+
+export type ActivityActionType = 
+  | 'LOGIN'
+  | 'LOGOUT'
+  | 'DEFECT_CREATE'
+  | 'DEFECT_UPDATE'
+  | 'DEFECT_DELETE'
+  | 'DEFECT_STATUS_CHANGE'
+  | 'PASSWORD_CHANGE'
+  | 'SETTINGS_UPDATE'
+  | 'USER_CREATE'
+  | 'DATABASE_CLEAN';
+
+export interface ActivityLogItem {
+  id: string;
+  type: ActivityActionType;
+  username: string;
+  name: string;
+  details: string;
+  timestamp: string; // ISO string
+  createdAt: number; // epoch ms
+  severity?: 'info' | 'warning' | 'critical' | 'success';
+  defectId?: string;
+  metadata?: Record<string, any>;
+}
+

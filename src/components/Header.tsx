@@ -16,7 +16,8 @@ import {
   LogOut,
   KeyRound,
   ShieldCheck,
-  MessageSquare
+  MessageSquare,
+  Radio
 } from 'lucide-react';
 import { ProjectMeta } from '../types.ts';
 import { useTheme } from '../context/ThemeContext.tsx';
@@ -28,6 +29,7 @@ interface HeaderProps {
   projectMeta: ProjectMeta;
   totalDefects: number;
   unreadChatCount?: number;
+  onlineUsersCount?: number;
   onOpenNewDefect: () => void;
   onExportCSV: () => void;
   onRefresh: () => void;
@@ -43,6 +45,7 @@ export const Header: React.FC<HeaderProps> = ({
   projectMeta,
   totalDefects,
   unreadChatCount = 0,
+  onlineUsersCount = 1,
   onOpenNewDefect,
   onExportCSV,
   onRefresh,
@@ -102,7 +105,9 @@ export const Header: React.FC<HeaderProps> = ({
       id: 'admin' as const,
       label: 'Administration',
       icon: ShieldCheck,
-      description: 'Engineers, RBAC, & project parameters'
+      badge: onlineUsersCount > 0 ? `${onlineUsersCount} Online` : undefined,
+      badgeColor: 'emerald',
+      description: 'Engineers, RBAC, live logs & project parameters'
     }] : []),
     {
       id: 'about' as const,
@@ -180,8 +185,13 @@ export const Header: React.FC<HeaderProps> = ({
                   <Icon className="w-3.5 h-3.5" />
                   <span>{item.label}</span>
                   {item.badge !== undefined && (
-                    <span className="px-1.5 py-0.2 text-[10px] rounded-full bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-mono">
-                      {item.badge}
+                    <span className={`px-1.5 py-0.2 text-[10px] rounded-full font-mono flex items-center gap-1 ${
+                      item.badgeColor === 'emerald'
+                        ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-bold'
+                        : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                    }`}>
+                      {item.badgeColor === 'emerald' && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />}
+                      <span>{item.badge}</span>
                     </span>
                   )}
                 </button>
@@ -243,8 +253,13 @@ export const Header: React.FC<HeaderProps> = ({
                         </div>
                         <div className="flex items-center gap-1.5">
                           {item.badge !== undefined && (
-                            <span className="px-1.5 py-0.5 text-[10px] rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-mono">
-                              {item.badge}
+                            <span className={`px-1.5 py-0.5 text-[10px] rounded-full font-mono flex items-center gap-1 ${
+                              item.badgeColor === 'emerald'
+                                ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-bold'
+                                : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
+                            }`}>
+                              {item.badgeColor === 'emerald' && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />}
+                              <span>{item.badge}</span>
                             </span>
                           )}
                           {isActive && <Check className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />}

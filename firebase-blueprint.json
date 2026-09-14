@@ -78,6 +78,37 @@
         "reactions": { "type": "object", "description": "Emoji reactions map" }
       },
       "required": ["channelId", "senderUsername", "senderName", "content", "timestamp"]
+    },
+    "UserSession": {
+      "title": "UserSession",
+      "description": "Active online session and presence record for a logged-in user",
+      "type": "object",
+      "properties": {
+        "sessionId": { "type": "string", "description": "Unique session identifier" },
+        "username": { "type": "string", "description": "Username of logged-in user" },
+        "name": { "type": "string", "description": "Display name of user" },
+        "role": { "type": "string", "description": "Role of the user" },
+        "status": { "type": "string", "description": "Online presence status: online or offline" },
+        "loginTime": { "type": "string", "description": "ISO timestamp of user sign-in" },
+        "lastActive": { "type": "number", "description": "Epoch millisecond timestamp of last heartbeat" },
+        "userAgent": { "type": "string", "description": "Client user agent" }
+      },
+      "required": ["sessionId", "username", "status", "lastActive"]
+    },
+    "ActivityLog": {
+      "title": "ActivityLog",
+      "description": "Audit event log for user logins, logouts, and system actions",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique activity log ID" },
+        "type": { "type": "string", "description": "Event type: LOGIN, LOGOUT, DEFECT_CREATE, DEFECT_UPDATE, etc." },
+        "username": { "type": "string", "description": "Username responsible for action" },
+        "name": { "type": "string", "description": "Display name of actor" },
+        "details": { "type": "string", "description": "Summary of activity" },
+        "timestamp": { "type": "string", "description": "ISO timestamp of activity" },
+        "createdAt": { "type": "number", "description": "Epoch timestamp for sorting" }
+      },
+      "required": ["id", "type", "username", "details", "createdAt"]
     }
   },
   "firestore": {
@@ -96,6 +127,14 @@
     "/chat_messages/{messageId}": {
       "schema": "ChatMessage",
       "description": "Real-time team chat messages collection"
+    },
+    "/user_sessions/{sessionId}": {
+      "schema": "UserSession",
+      "description": "Real-time active user sessions and online presence"
+    },
+    "/activity_logs/{logId}": {
+      "schema": "ActivityLog",
+      "description": "System audit and authentication activity logs"
     }
   }
 }

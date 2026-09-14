@@ -33,9 +33,11 @@ import {
   Info,
   LayoutGrid,
   List,
-  Tag
+  Tag,
+  Radio,
+  Activity
 } from 'lucide-react';
-import { ProjectMeta, QAUser, UserPermissions, DefectItem } from '../types.ts';
+import { ProjectMeta, QAUser, UserPermissions, DefectItem, UserSession } from '../types.ts';
 import { isUserAdmin } from '../utils/permissions.ts';
 import { 
   getAllQAUsers, 
@@ -44,6 +46,7 @@ import {
   deleteQAUser, 
   changeUserPassword 
 } from '../firebase/authService.ts';
+import { LogsView } from './LogsView.tsx';
 
 interface AdminDashboardViewProps {
   projectMeta: ProjectMeta;
@@ -53,6 +56,11 @@ interface AdminDashboardViewProps {
   onNavigateBack: () => void;
   currentUser: string;
   totalDefects: number;
+  onlineUsers?: UserSession[];
+  defects?: DefectItem[];
+  onNavigateToChatWithUser?: (username: string) => void;
+  onOpenDefectModal?: (defect: DefectItem) => void;
+  initialAdminSection?: 'engineers' | 'project' | 'logs' | 'audit';
 }
 
 export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
@@ -62,9 +70,14 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
   onClearAllDefects,
   onNavigateBack,
   currentUser,
-  totalDefects
+  totalDefects,
+  onlineUsers = [],
+  defects = [],
+  onNavigateToChatWithUser,
+  onOpenDefectModal,
+  initialAdminSection = 'engineers'
 }) => {
-  const [activeAdminSection, setActiveAdminSection] = useState<'engineers' | 'project' | 'audit'>('engineers');
+  const [activeAdminSection, setActiveAdminSection] = useState<'engineers' | 'project' | 'logs' | 'audit'>(initialAdminSection);
   const [mobileLayout, setMobileLayout] = useState<'cards' | 'table'>('cards');
   
   // Engineers state
@@ -450,8 +463,8 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
 
       {/* Navigation Sub-Tabs & Action Bar */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-3">
-        {/* Responsive Segmented Tabs Group (Grid 3-cols on mobile, flex on desktop - zero cut-offs) */}
-        <div className="grid grid-cols-3 sm:flex items-center gap-1 sm:gap-1.5 p-1 bg-slate-100 dark:bg-slate-900/90 rounded-2xl border border-slate-200 dark:border-slate-800/90 w-full lg:w-auto">
+        {/* Responsive Segmented Tabs Group (Grid 2x2 on mobile, flex on desktop - zero cut-offs) */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:flex items-center gap-1 sm:gap-1.5 p-1 bg-slate-100 dark:bg-slate-900/90 rounded-2xl border border-slate-200 dark:border-slate-800/90 w-full lg:w-auto">
           <button
             onClick={() => setActiveAdminSection('engineers')}
             className={`inline-flex items-center justify-center gap-1 sm:gap-2 px-2 sm:px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer min-w-0 ${
@@ -490,6 +503,31 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
           </button>
 
           <button
+            onClick={() => setActiveAdminSection('logs')}
+            className={`inline-flex items-center justify-center gap-1 sm:gap-2 px-2 sm:px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer min-w-0 ${
+              activeAdminSection === 'logs'
+                ? 'bg-indigo-600 text-white shadow-sm'
+                : 'text-slate-700 dark:text-slate-300 hover:bg-white/60 dark:hover:bg-slate-800/80'
+            }`}
+          >
+            <Radio className={`w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 ${activeAdminSection === 'logs' ? 'text-emerald-300' : 'text-emerald-500'}`} />
+            <span className="truncate">
+              <span className="sm:hidden">Live Logs</span>
+              <span className="hidden sm:inline">Live Logs &amp; Presence</span>
+            </span>
+            {onlineUsers.length > 0 && (
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono shrink-0 flex items-center gap-1 ${
+                activeAdminSection === 'logs'
+                  ? 'bg-indigo-950/40 text-emerald-200'
+                  : 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300'
+              }`}>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                {onlineUsers.length}
+              </span>
+            )}
+          </button>
+
+          <button
             onClick={() => setActiveAdminSection('audit')}
             className={`inline-flex items-center justify-center gap-1 sm:gap-2 px-2 sm:px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer min-w-0 ${
               activeAdminSection === 'audit'
@@ -499,8 +537,8 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
           >
             <Shield className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
             <span className="truncate">
-              <span className="sm:hidden">Audit Log</span>
-              <span className="hidden sm:inline">Security &amp; Audit Log</span>
+              <span className="sm:hidden">Security</span>
+              <span className="hidden sm:inline">Security &amp; Policy</span>
             </span>
           </button>
         </div>
@@ -1380,6 +1418,21 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ================= SECTION 4: REAL-TIME LIVE LOGS & ACTIVE SESSIONS ================= */}
+      {activeAdminSection === 'logs' && (
+        <div className="space-y-6 animate-in fade-in duration-200">
+          <LogsView
+            currentUser={currentUser}
+            onlineUsers={onlineUsers}
+            allTeamUsers={users}
+            defects={defects}
+            embedded={true}
+            onOpenDefectModal={onOpenDefectModal}
+            onNavigateToChatWithUser={onNavigateToChatWithUser}
+          />
         </div>
       )}
 

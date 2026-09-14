@@ -21,6 +21,8 @@ import {
   validateCredentials, 
   changeUserPassword 
 } from '../firebase/authService.ts';
+import { startUserPresence } from '../firebase/presenceService.ts';
+import { isUserAdmin } from '../utils/permissions.ts';
 
 interface LoginPageProps {
   onLoginSuccess: (username: string) => void;
@@ -82,11 +84,30 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
         return;
       }
 
-      // Success
+      const validUser = result.user || {
+        username: cleanUsername,
+        name: cleanUsername,
+        role: isUserAdmin(cleanUsername) ? 'Administrator' : 'QA Engineer'
+      };
+
+      try {
+        sessionStorage.setItem('illusion_qa_user', validUser.username);
+        sessionStorage.setItem('illusion_qa_name', validUser.name || validUser.username);
+        sessionStorage.setItem('illusion_qa_role', validUser.role || 'QA Engineer');
+      } catch {}
+
+      // Immediately write session and login log into Firestore
+      startUserPresence({
+        username: validUser.username,
+        name: validUser.name || validUser.username,
+        role: validUser.role || 'QA Engineer'
+      }).catch(console.warn);
+
+      // Success callback
       setTimeout(() => {
         setIsSubmitting(false);
-        onLoginSuccess(result.user?.username || cleanUsername);
-      }, 300);
+        onLoginSuccess(validUser.username);
+      }, 250);
     } catch {
       setIsSubmitting(false);
       setError('Authentication failed. Please check network and try again.');
