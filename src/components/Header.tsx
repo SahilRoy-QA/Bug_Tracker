@@ -122,24 +122,25 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header className="bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-800/80 sticky top-0 z-40 transition-colors">
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-2.5 sm:px-6 lg:px-8">
         {/* Main Header Bar */}
-        <div className="flex items-center justify-between py-2 sm:py-2.5 gap-2 sm:gap-4">
+        <div className="flex items-center justify-between py-2 sm:py-2.5 gap-1.5 sm:gap-4">
           {/* App Branding & Project Title - Click to go to Dashboard */}
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-3 min-w-0 shrink">
             <button
               onClick={() => setActiveTab('dashboard')}
-              className="flex items-center gap-2 sm:gap-2.5 text-left focus:outline-none group cursor-pointer shrink-0"
+              className="flex items-center gap-2 sm:gap-2.5 text-left focus:outline-none group cursor-pointer min-w-0"
               title="Go to Dashboard"
               aria-label="Go to Dashboard"
             >
               <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-indigo-50 dark:bg-indigo-950 border border-indigo-200 dark:border-indigo-500/30 flex items-center justify-center shrink-0 shadow-xs group-hover:border-indigo-400 dark:group-hover:border-indigo-400 group-hover:bg-indigo-100/50 dark:group-hover:bg-indigo-900/40 transition">
                 <Bug className="w-4 h-4 text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform shrink-0" />
               </div>
-              <div className="shrink-0">
+              <div className="min-w-0">
                 <div className="flex items-center gap-1.5">
-                  <h1 className="text-xs sm:text-sm md:text-base font-bold tracking-tight text-slate-900 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors whitespace-nowrap">
-                    Illusion_Dashboard
+                  <h1 className="text-xs sm:text-sm md:text-base font-bold tracking-tight text-slate-900 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors truncate">
+                    <span className="inline sm:hidden">Illusion</span>
+                    <span className="hidden sm:inline">Illusion_Dashboard</span>
                   </h1>
                 </div>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400 hidden sm:block whitespace-nowrap">
@@ -202,15 +203,15 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Right Action Controls */}
           <div className="flex items-center gap-1.5 sm:gap-2 text-xs shrink-0">
             {/* Mobile / Tablet Navigation Button */}
-            <div className="relative lg:hidden" ref={menuRef}>
+            <div className="relative lg:hidden shrink-0" ref={menuRef}>
               <button
                 onClick={() => setIsMenuOpen(prev => !prev)}
-                className="inline-flex items-center gap-1 sm:gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 hover:text-slate-900 dark:hover:text-white font-medium transition border border-slate-200 dark:border-slate-700/80 dark:hover:border-slate-600 shadow-xs"
+                className="inline-flex items-center gap-1 sm:gap-1.5 px-2 py-1.5 sm:px-2.5 sm:py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 hover:text-slate-900 dark:hover:text-white font-medium transition border border-slate-200 dark:border-slate-700/80 dark:hover:border-slate-600 shadow-xs shrink-0"
                 aria-expanded={isMenuOpen}
                 aria-label="Toggle navigation menu"
               >
                 <CurrentIcon className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
-                <span className="text-xs font-semibold max-w-[70px] xs:max-w-[95px] sm:max-w-[120px] truncate">{currentNav.label}</span>
+                <span className="text-xs font-semibold max-w-[55px] xs:max-w-[85px] sm:max-w-[120px] truncate">{currentNav.label}</span>
                 <ChevronDown className={`w-3 h-3 sm:w-3.5 sm:h-3.5 text-slate-500 dark:text-slate-400 transition-transform duration-150 shrink-0 ${isMenuOpen ? 'rotate-180' : ''}`} />
               </button>
 
@@ -321,18 +322,18 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Theme Toggle Button */}
             <button
               onClick={toggleTheme}
-              className="inline-flex items-center justify-center p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/90 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 transition border border-slate-200 dark:border-slate-700/60 cursor-pointer"
+              className="w-8 h-8 sm:w-auto sm:h-auto flex items-center justify-center p-0 sm:px-2.5 sm:py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/90 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 transition border border-slate-200 dark:border-slate-700/60 cursor-pointer shrink-0"
               title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
               aria-label="Toggle dark/light theme"
             >
               {theme === 'dark' ? (
                 <>
-                  <Sun className="w-3.5 h-3.5 text-amber-400" />
+                  <Sun className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                   <span className="hidden xl:inline ml-1 font-medium text-[11px]">Light</span>
                 </>
               ) : (
                 <>
-                  <Moon className="w-3.5 h-3.5 text-indigo-600" />
+                  <Moon className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
                   <span className="hidden xl:inline ml-1 font-medium text-[11px]">Dark</span>
                 </>
               )}
@@ -341,7 +342,7 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Primary Action: Log Defect */}
             <button
               onClick={onOpenNewDefect}
-              className="inline-flex items-center justify-center gap-1 sm:gap-1.5 p-1.5 sm:px-3 sm:py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white shadow-xs transition shrink-0 cursor-pointer"
+              className="w-8 h-8 sm:w-auto sm:h-auto flex items-center justify-center gap-1 sm:gap-1.5 p-0 sm:px-3 sm:py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white shadow-xs transition shrink-0 cursor-pointer"
               title="Log new defect"
               aria-label="Log new defect"
             >
@@ -354,14 +355,14 @@ export const Header: React.FC<HeaderProps> = ({
               <div className="relative shrink-0" ref={userMenuRef}>
                 <button 
                   onClick={() => setIsUserMenuOpen(prev => !prev)}
-                  className="flex items-center gap-1 p-1.5 sm:px-2 sm:py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/80 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-mono border border-slate-200 dark:border-slate-700/60 transition cursor-pointer"
+                  className="w-8 h-8 sm:w-auto sm:h-auto flex items-center justify-center gap-1 p-0 sm:px-2 sm:py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/80 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-mono border border-slate-200 dark:border-slate-700/60 transition cursor-pointer shrink-0"
                   title={`User Menu: ${currentUser}`}
                   aria-expanded={isUserMenuOpen}
                   aria-label="Toggle user account dropdown"
                 >
-                  <User className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                  <User className="w-4 h-4 sm:w-3.5 sm:h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
                   <span className="font-semibold text-[11px] hidden md:inline truncate max-w-[80px]">{currentUser}</span>
-                  <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform duration-150 ${isUserMenuOpen ? 'rotate-180' : ''}`} />
+                  <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform duration-150 hidden sm:inline-block shrink-0 ${isUserMenuOpen ? 'rotate-180' : ''}`} />
                 </button>
 
                 {/* Mobile Backdrop */}

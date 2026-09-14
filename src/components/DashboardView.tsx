@@ -868,7 +868,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     </span>
                   )}
                   <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400 px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                    v{projectMeta.version || '5.1.0'} (Rev. {projectMeta.revision || '2502'})
+                    v{projectMeta.version || '6.0.1'} (Rev. {projectMeta.revision || '2601'})
                   </span>
                 </div>
                 {projectMeta.projectLink && (

@@ -573,7 +573,7 @@ export async function seedInitialActivityLogsIfEmpty(): Promise<void> {
         type: 'SETTINGS_UPDATE',
         username: 'admin',
         name: 'System Admin',
-        details: 'Updated test execution suite configuration to Revision 2502',
+        details: 'Updated test execution suite configuration to Revision 2601',
         severity: 'info',
         timestamp: new Date(Date.now() - 1000 * 60 * 8).toISOString()
       }

@@ -206,7 +206,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
             SYSTEM ONLINE
           </span>
           <span className="hidden sm:inline-block text-[11px] font-mono text-slate-400">
-            v5.1.0 (Rev. 2502)
+            v6.0.1 (Rev. 2601)
           </span>
         </div>
       </header>
@@ -497,7 +497,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
 
       {/* Footer */}
       <footer className="relative z-10 w-full text-center py-4 text-xs text-slate-500">
-        <p>© {new Date().getFullYear()} Illusio Tech · Illusion_Dashboard v5.1.0 (Rev. 2502)</p>
+        <p>© {new Date().getFullYear()} Illusio Tech · Illusion_Dashboard v6.0.1 (Rev. 2601)</p>
       </footer>
     </div>
   );
