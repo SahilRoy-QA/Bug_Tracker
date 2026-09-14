@@ -51,6 +51,7 @@ import { CheckCircle2, AlertCircle, Info, X } from 'lucide-react';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'sheet' | 'chat' | 'about' | 'admin'>('dashboard');
+  const [previousTab, setPreviousTab] = useState<'dashboard' | 'sheet' | 'about' | 'admin'>('dashboard');
   const [projectMeta, setProjectMeta] = useState<ProjectMeta>(() => loadStoredProject());
   const [defects, setDefects] = useState<DefectItem[]>(() => loadStoredDefects());
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
@@ -595,7 +596,12 @@ export default function App() {
       {/* Main Header */}
       <Header
         activeTab={activeTab}
-        setActiveTab={setActiveTab}
+        setActiveTab={(tab) => {
+          if (activeTab !== 'chat') {
+            setPreviousTab(activeTab);
+          }
+          setActiveTab(tab);
+        }}
         projectMeta={projectMeta}
         totalDefects={defects.length}
         unreadChatCount={unreadChatCount}
@@ -647,6 +653,7 @@ export default function App() {
             defects={defects}
             onlineUsers={onlineUsers}
             initialDmUser={initialDmUser}
+            onClose={() => setActiveTab(previousTab || 'dashboard')}
             onOpenDefectModal={(defect) => setModalState({ isOpen: true, defect })}
             onNavigateToSheet={(defectId) => {
               setActiveTab('sheet');
@@ -700,7 +707,12 @@ export default function App() {
       <QuickChatFloatingButton
         isActive={activeTab === 'chat'}
         unreadCount={unreadChatCount}
-        onClick={() => setActiveTab('chat')}
+        onClick={() => {
+          if (activeTab !== 'chat') {
+            setPreviousTab(activeTab);
+          }
+          setActiveTab('chat');
+        }}
       />
 
       {/* Edit / New Defect Modal */}

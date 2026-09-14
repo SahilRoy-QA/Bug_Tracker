@@ -47,6 +47,7 @@ interface ChatViewProps {
   initialDmUser?: string;
   onOpenDefectModal?: (defect: DefectItem) => void;
   onNavigateToSheet?: (defectId?: string) => void;
+  onClose?: () => void;
 }
 
 const POPULAR_EMOJIS = ['👍', '🔥', '✅', '👀', '🚀', '❤️', '🐛', '🎉'];
@@ -57,7 +58,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
   onlineUsers,
   initialDmUser,
   onOpenDefectModal,
-  onNavigateToSheet
+  onNavigateToSheet,
+  onClose
 }) => {
   const [activeChannelId, setActiveChannelId] = useState<string>(() => {
     if (initialDmUser) {
@@ -337,9 +339,9 @@ export const ChatView: React.FC<ChatViewProps> = ({
               isSidebarOpenOnMobile ? 'translate-x-0' : '-translate-x-full md:translate-x-0 absolute md:relative inset-y-0 left-0'
             }`}
           >
-            {/* Sidebar Search */}
-            <div className="p-3 border-b border-slate-200 dark:border-slate-800">
-              <div className="relative">
+            {/* Sidebar Search & Mobile Close */}
+            <div className="p-3 border-b border-slate-200 dark:border-slate-800 flex items-center gap-2">
+              <div className="relative flex-1">
                 <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
                   type="text"
@@ -357,6 +359,17 @@ export const ChatView: React.FC<ChatViewProps> = ({
                   </button>
                 )}
               </div>
+              {onClose && (
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="md:hidden p-1.5 rounded-xl text-slate-500 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-slate-200 dark:border-slate-700 transition cursor-pointer shrink-0"
+                  title="Close Team Chat"
+                  aria-label="Close Team Chat"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
             </div>
 
             {/* Channels & DMs List */}
@@ -591,9 +604,9 @@ export const ChatView: React.FC<ChatViewProps> = ({
                 </div>
               </div>
 
-              {/* Chat Search inside conversation */}
-              <div className="flex items-center gap-2">
-                <div className="relative hidden sm:block w-44 md:w-56">
+              {/* Chat Search & Close Button */}
+              <div className="flex items-center gap-2 shrink-0">
+                <div className="relative hidden sm:block w-36 md:w-52">
                   <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input
                     type="text"
@@ -611,6 +624,19 @@ export const ChatView: React.FC<ChatViewProps> = ({
                     </button>
                   )}
                 </div>
+
+                {onClose && (
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 sm:py-1.5 rounded-lg bg-slate-100 hover:bg-rose-50 dark:bg-slate-800 dark:hover:bg-rose-950/40 text-slate-600 hover:text-rose-600 dark:text-slate-300 dark:hover:text-rose-400 border border-slate-200 dark:border-slate-700 hover:border-rose-300 dark:hover:border-rose-800/60 transition cursor-pointer shrink-0 text-xs font-semibold shadow-xs"
+                    title="Close Team Chat"
+                    aria-label="Close Team Chat"
+                  >
+                    <X className="w-4 h-4 shrink-0" />
+                    <span className="hidden xs:inline">Close</span>
+                  </button>
+                )}
               </div>
             </header>
 

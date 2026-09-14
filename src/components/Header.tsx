@@ -125,45 +125,33 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="max-w-7xl mx-auto px-2.5 sm:px-6 lg:px-8">
         {/* Main Header Bar */}
         <div className="flex items-center justify-between py-2 sm:py-2.5 gap-1.5 sm:gap-4">
-          {/* App Branding & Project Title - Click to go to Dashboard */}
-          <div className="flex items-center gap-1.5 sm:gap-3 min-w-0 shrink">
+          {/* App Branding & Title - Click to go to Dashboard */}
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             <button
               onClick={() => setActiveTab('dashboard')}
-              className="flex items-center gap-2 sm:gap-2.5 text-left focus:outline-none group cursor-pointer min-w-0"
+              className="flex items-center gap-2 sm:gap-2.5 text-left focus:outline-none group cursor-pointer shrink-0"
               title="Go to Dashboard"
               aria-label="Go to Dashboard"
             >
               <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-indigo-50 dark:bg-indigo-950 border border-indigo-200 dark:border-indigo-500/30 flex items-center justify-center shrink-0 shadow-xs group-hover:border-indigo-400 dark:group-hover:border-indigo-400 group-hover:bg-indigo-100/50 dark:group-hover:bg-indigo-900/40 transition">
                 <Bug className="w-4 h-4 text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform shrink-0" />
               </div>
-              <div className="min-w-0">
+              <div className="flex flex-col shrink-0">
                 <div className="flex items-center gap-1.5">
-                  <h1 className="text-xs sm:text-sm md:text-base font-bold tracking-tight text-slate-900 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors truncate">
+                  <h1 className="text-xs sm:text-sm md:text-base font-bold tracking-tight text-slate-900 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors whitespace-nowrap">
                     <span className="inline sm:hidden">Illusion</span>
                     <span className="hidden sm:inline">Illusion_Dashboard</span>
                   </h1>
                 </div>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 hidden sm:block whitespace-nowrap">
-                  Quality Engineering &amp; Defect Tracker by Illusio Tech
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 hidden xl:block whitespace-nowrap">
+                  Quality Engineering &amp; Defect Tracker
                 </p>
               </div>
             </button>
-
-            {/* Project & Live Badges: shown cleanly on xl screens where horizontal room is ample */}
-            <div className="hidden xl:flex items-center gap-2 shrink-0 border-l border-slate-200 dark:border-slate-800 pl-3">
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700/80 max-w-[200px] truncate" title={projectMeta.projectName}>
-                {projectMeta.projectName}
-              </span>
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shadow-xs">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                <Database className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
-                Firestore Live
-              </span>
-            </div>
           </div>
 
           {/* Desktop Navigation Tabs (Visible on lg screens and larger) */}
-          <nav className="hidden lg:flex items-center space-x-1">
+          <nav className="hidden lg:flex items-center gap-1 shrink-0">
             {navItems.map(item => {
               const Icon = item.icon;
               const isActive = activeTab === item.id;
@@ -173,7 +161,7 @@ export const Header: React.FC<HeaderProps> = ({
                 <button
                   key={item.id}
                   onClick={() => setActiveTab(item.id)}
-                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer ${
+                  className={`inline-flex items-center gap-1.5 px-2.5 xl:px-3 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer whitespace-nowrap shrink-0 ${
                     isActive
                       ? isSpecialAdmin
                         ? 'bg-indigo-600 text-white font-bold shadow-xs'
@@ -183,15 +171,15 @@ export const Header: React.FC<HeaderProps> = ({
                         : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/50'
                   }`}
                 >
-                  <Icon className="w-3.5 h-3.5" />
+                  <Icon className="w-3.5 h-3.5 shrink-0" />
                   <span>{item.label}</span>
                   {item.badge !== undefined && (
-                    <span className={`px-1.5 py-0.2 text-[10px] rounded-full font-mono flex items-center gap-1 ${
+                    <span className={`px-1.5 py-0.2 text-[10px] rounded-full font-mono flex items-center gap-1 shrink-0 ${
                       item.badgeColor === 'emerald'
                         ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-bold'
                         : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
                     }`}>
-                      {item.badgeColor === 'emerald' && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />}
+                      {item.badgeColor === 'emerald' && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />}
                       <span>{item.badge}</span>
                     </span>
                   )}
