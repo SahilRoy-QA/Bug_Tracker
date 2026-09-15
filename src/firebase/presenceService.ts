@@ -4,7 +4,10 @@ import {
   setDoc,
   deleteDoc,
   onSnapshot,
-  getDocs
+  getDocs,
+  query,
+  where,
+  updateDoc
 } from 'firebase/firestore';
 import { db } from './config.ts';
 import { UserSession, ActivityLogItem, ActivityActionType } from '../types.ts';
@@ -15,9 +18,9 @@ const LOCAL_SESSIONS_KEY = 'illusion_qa_cached_sessions_v2';
 const LOCAL_ACTIVITY_KEY = 'illusion_qa_cached_activity_logs_v2';
 const SESSION_STORAGE_ID_KEY = 'illusion_qa_session_id_v2';
 
-// Threshold: session is online if heartbeat or login was within last 5 minutes (300,000 ms)
-// This accommodates background tab throttling, mobile sleep, and cross-machine clock drifts
-const ONLINE_THRESHOLD_MS = 5 * 60 * 1000;
+// Threshold: session is strictly online if heartbeat was within last 90 seconds (90,000 ms)
+// Heartbeats occur every 15s; 90s generously accommodates mobile sleep and background tab throttling
+const ONLINE_THRESHOLD_MS = 90 * 1000;
 
 /**
  * Utility: Remove all undefined or null keys so Firestore never throws
@@ -227,10 +230,10 @@ export async function endUserPresence(user?: { username: string; name: string })
   }
 
   const sessionId = getOrCreateSessionId();
+  const cleanUsername = user?.username?.trim().toLowerCase();
+  const cleanName = user?.name || cleanUsername;
 
-  if (user) {
-    const cleanUsername = user.username.trim().toLowerCase();
-    const cleanName = user.name || cleanUsername;
+  if (cleanUsername) {
     recordActivityLog({
       type: 'LOGOUT',
       username: cleanUsername,
@@ -240,6 +243,7 @@ export async function endUserPresence(user?: { username: string; name: string })
     }).catch(() => {});
   }
 
+  // 1. Immediately mark this specific tab's session as offline in Firestore
   try {
     const sessionRef = doc(db, SESSIONS_COLLECTION, sessionId);
     await setDoc(
@@ -251,12 +255,36 @@ export async function endUserPresence(user?: { username: string; name: string })
       { merge: true }
     );
   } catch (err) {
-    console.warn('Failed to mark session offline:', err);
+    console.warn('Failed to mark session offline in Firestore:', err);
   }
 
-  // Update local cache
+  // 2. Also mark any other sessions in Firestore belonging to this username as offline
+  if (cleanUsername) {
+    try {
+      const q = query(
+        collection(db, SESSIONS_COLLECTION),
+        where('username', '==', cleanUsername)
+      );
+      const snap = await getDocs(q);
+      const updates = snap.docs.map((d) => {
+        const data = d.data();
+        if (data && data.status === 'online') {
+          return updateDoc(d.ref, {
+            status: 'offline',
+            lastActive: Date.now()
+          });
+        }
+        return Promise.resolve();
+      });
+      await Promise.all(updates);
+    } catch (err) {
+      console.warn('Failed to mark all user sessions offline:', err);
+    }
+  }
+
+  // 3. Update local cache: mark all sessions for this sessionId or username as offline
   const cached = getCachedSessions().map((s) => {
-    if (s.sessionId === sessionId) {
+    if (s.sessionId === sessionId || (cleanUsername && s.username.toLowerCase() === cleanUsername)) {
       return { ...s, status: 'offline' as const, lastActive: Date.now() };
     }
     return s;
@@ -267,6 +295,9 @@ export async function endUserPresence(user?: { username: string; name: string })
 /**
  * Filter and deduplicate unique online users from sessions.
  * Accounts for cross-system clock skews and background tab throttling.
+ * Strictly checks that:
+ * 1. session.status is explicitly 'online'
+ * 2. session has a valid heartbeat recorded within ONLINE_THRESHOLD_MS (90s)
  */
 export function getUniqueOnlineUsers(sessions: UserSession[]): UserSession[] {
   const now = Date.now();
@@ -275,16 +306,20 @@ export function getUniqueOnlineUsers(sessions: UserSession[]): UserSession[] {
   for (const s of sessions) {
     if (!s || !s.username) continue;
 
+    // Must be explicitly marked online
+    if (s.status !== 'online') continue;
+
     const lastActiveMs = typeof s.lastActive === 'number'
       ? s.lastActive
-      : (typeof s.lastActive === 'string' ? (Date.parse(s.lastActive) || Date.now()) : Date.now());
+      : (typeof s.lastActive === 'string' ? (Date.parse(s.lastActive) || 0) : 0);
+
+    if (!lastActiveMs || lastActiveMs <= 0) continue;
 
     // Difference between local machine time and recorded timestamp
     const diff = Math.abs(now - lastActiveMs);
 
-    // Consider online if explicitly marked online and active within the window
-    const isRecentlyActive = s.status === 'online' && diff < ONLINE_THRESHOLD_MS;
-    if (!isRecentlyActive && s.status !== 'online') continue;
+    // If heartbeat was not within last 90 seconds, the user is NOT online
+    if (diff > ONLINE_THRESHOLD_MS) continue;
 
     const uname = s.username.toLowerCase();
     const existing = userMap.get(uname);
@@ -293,7 +328,8 @@ export function getUniqueOnlineUsers(sessions: UserSession[]): UserSession[] {
         ...s,
         username: uname,
         name: s.name || uname,
-        lastActive: lastActiveMs
+        lastActive: lastActiveMs,
+        status: 'online'
       });
     }
   }
@@ -309,9 +345,33 @@ export function subscribeToOnlineSessions(
 ): () => void {
   let currentRawSessions: UserSession[] = getCachedSessions();
 
-  // Trigger initial callback immediately
+  // Trigger initial callback immediately with cached data
   const initialOnline = getUniqueOnlineUsers(currentRawSessions);
   callback(initialOnline, currentRawSessions);
+
+  // Background routine to clean up stale sessions in Firestore (runs on startup & every 60s)
+  const purgeStaleSessions = async () => {
+    try {
+      const snap = await getDocs(collection(db, SESSIONS_COLLECTION));
+      const now = Date.now();
+      snap.docs.forEach((d) => {
+        const data = d.data();
+        if (data && data.status === 'online') {
+          const lastActive = typeof data.lastActive === 'number'
+            ? data.lastActive
+            : (typeof data.lastActive === 'string' ? (Date.parse(data.lastActive) || 0) : 0);
+          if (now - lastActive > ONLINE_THRESHOLD_MS) {
+            updateDoc(d.ref, { status: 'offline' }).catch(() => {});
+          }
+        }
+      });
+    } catch {
+      // Ignore background cleanup warning
+    }
+  };
+
+  // Run initial cleanup once after 1 second
+  setTimeout(purgeStaleSessions, 1000);
 
   // Firestore real-time listener
   let unsubscribeFirestore = () => {};
@@ -332,7 +392,8 @@ export function subscribeToOnlineSessions(
               ...data,
               username: data.username.toLowerCase(),
               name: data.name || data.username,
-              lastActive: parsedLastActive
+              lastActive: parsedLastActive,
+              status: data.status || 'offline'
             });
           }
         });
@@ -349,15 +410,29 @@ export function subscribeToOnlineSessions(
     console.warn('Failed to initiate sessions listener:', err);
   }
 
-  // Local ticker every 3 seconds to re-evaluate active heartbeats
+  // Local ticker to re-evaluate active heartbeats
+  // Only invokes callback if the list of active online usernames actually changes
+  let lastDispatchedOnlineSignatures = '';
   const ticker = setInterval(() => {
     const updatedOnline = getUniqueOnlineUsers(currentRawSessions);
-    callback(updatedOnline, currentRawSessions);
-  }, 3000);
+    const signature = updatedOnline
+      .map((u) => `${u.username}:${u.status}`)
+      .sort()
+      .join('|');
+
+    if (signature !== lastDispatchedOnlineSignatures) {
+      lastDispatchedOnlineSignatures = signature;
+      callback(updatedOnline, currentRawSessions);
+    }
+  }, 4000);
+
+  // Periodic cleanup of stale sessions in Firestore every 60 seconds
+  const staleCleanupInterval = setInterval(purgeStaleSessions, 60000);
 
   return () => {
     unsubscribeFirestore();
     clearInterval(ticker);
+    clearInterval(staleCleanupInterval);
   };
 }
 

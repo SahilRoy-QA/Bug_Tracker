@@ -5,7 +5,7 @@ import {
   Radio,
   Search,
   Filter,
-  Download,
+  Upload,
   Clock,
   Laptop,
   CheckCircle2,
@@ -91,18 +91,30 @@ export const LogsView: React.FC<LogsViewProps> = ({
     }
   }, [allTeamUsers]);
 
-  // Merge external and internal online sessions
+  // Merge external and internal online sessions with strict online validation
   const effectiveOnlineUsers = useMemo(() => {
     const map = new Map<string, UserSession>();
-    // Prioritize sessions with most recent lastActive
-    [...(internalOnlineUsers || []), ...(onlineUsers || [])].forEach((s) => {
-      if (!s || !s.username) return;
+    const now = Date.now();
+    // Prefer authoritative onlineUsers if passed by parent App, fallback to internalOnlineUsers
+    const source = (onlineUsers !== undefined && onlineUsers !== null) ? onlineUsers : internalOnlineUsers;
+
+    (source || []).forEach((s) => {
+      if (!s || !s.username || s.status !== 'online') return;
+      const lastActiveMs = typeof s.lastActive === 'number'
+        ? s.lastActive
+        : (typeof s.lastActive === 'string' ? (Date.parse(s.lastActive) || 0) : 0);
+
+      // Heartbeat must be within 90 seconds
+      const diff = Math.abs(now - lastActiveMs);
+      if (diff > 90000) return;
+
       const uname = s.username.toLowerCase();
       const existing = map.get(uname);
-      if (!existing || (s.lastActive || 0) > (existing.lastActive || 0)) {
-        map.set(uname, s);
+      if (!existing || lastActiveMs > (existing.lastActive || 0)) {
+        map.set(uname, { ...s, lastActive: lastActiveMs, status: 'online' });
       }
     });
+
     return Array.from(map.values());
   }, [onlineUsers, internalOnlineUsers]);
 
@@ -402,7 +414,7 @@ export const LogsView: React.FC<LogsViewProps> = ({
             onClick={handleExportCSV}
             className="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/80 transition flex items-center gap-1.5 cursor-pointer shadow-xs"
           >
-            <Download className="w-3.5 h-3.5" />
+            <Upload className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Export CSV</span>
           </button>
         </div>

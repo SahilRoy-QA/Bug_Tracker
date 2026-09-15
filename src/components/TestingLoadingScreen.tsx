@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { TestingLogo } from './TestingLogo.tsx';
-import { CheckCircle2, ShieldCheck, Terminal, Activity, Layers, Database } from 'lucide-react';
+import { CheckCircle2, ShieldCheck, Terminal, Activity, Layers, Database, ArrowRight } from 'lucide-react';
 
 interface TestingLoadingScreenProps {
   username: string;
-  onComplete: () => void;
+  onComplete: (username?: string) => void;
 }
 
 interface TestStep {
@@ -15,12 +15,24 @@ interface TestStep {
 }
 
 export const TestingLoadingScreen: React.FC<TestingLoadingScreenProps> = ({ username, onComplete }) => {
-  const [progress, setProgress] = useState(12);
+  const [progress, setProgress] = useState(15);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [logs, setLogs] = useState<string[]>([
     `[INFO] Session initiated for QA engineer: @${username}`,
     `[RUNNER] Booting Illusio automated QA test harness v6.1.0 (Rev 2620)...`,
   ]);
+
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
+  const usernameRef = useRef(username);
+  usernameRef.current = username;
+  const hasCompletedRef = useRef(false);
+
+  const triggerComplete = () => {
+    if (hasCompletedRef.current) return;
+    hasCompletedRef.current = true;
+    onCompleteRef.current?.(usernameRef.current);
+  };
 
   const testSteps: TestStep[] = [
     {
@@ -50,19 +62,19 @@ export const TestingLoadingScreen: React.FC<TestingLoadingScreenProps> = ({ user
   ];
 
   useEffect(() => {
-    // Step progression timers
+    // Step progression timers - run once on mount without cancellation by parent re-renders
     const t1 = setTimeout(() => {
-      setProgress(36);
+      setProgress(40);
       setCurrentStepIndex(1);
       setLogs(prev => [
         ...prev,
         `✔ ASSERT: auth.hasValidScope("qa_lead") [18ms]`,
         `[SUITE] Executing regression test sweep on "Online Banking Portal"...`
       ]);
-    }, 600);
+    }, 450);
 
     const t2 = setTimeout(() => {
-      setProgress(68);
+      setProgress(72);
       setCurrentStepIndex(2);
       setLogs(prev => [
         ...prev,
@@ -70,21 +82,28 @@ export const TestingLoadingScreen: React.FC<TestingLoadingScreenProps> = ({ user
         `✔ ASSERT: defect_matrix.criticalDefects <= 1 [PASS]`,
         `[SYNC] Connecting to advance-infinity-w53bd Firestore instance...`
       ]);
-    }, 1300);
+    }, 950);
 
     const t3 = setTimeout(() => {
-      setProgress(92);
+      setProgress(95);
       setCurrentStepIndex(3);
       setLogs(prev => [
         ...prev,
         `✔ FIRESTORE: Live snapshot listener attached [26ms]`,
         `[READY] QA Environment calibrated. Launching Illusion_Dashboard...`
       ]);
-    }, 2000);
+    }, 1450);
 
     const t4 = setTimeout(() => {
       setProgress(100);
-      setTimeout(onComplete, 400);
+      setTimeout(() => {
+        triggerComplete();
+      }, 250);
+    }, 1850);
+
+    // Hard fallback failsafe: guarantee dashboard opens within 2.5s maximum
+    const tFallback = setTimeout(() => {
+      triggerComplete();
     }, 2500);
 
     return () => {
@@ -92,8 +111,9 @@ export const TestingLoadingScreen: React.FC<TestingLoadingScreenProps> = ({ user
       clearTimeout(t2);
       clearTimeout(t3);
       clearTimeout(t4);
+      clearTimeout(tFallback);
     };
-  }, [onComplete, username]);
+  }, []);
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center justify-center p-4 relative overflow-hidden font-sans">
@@ -219,6 +239,20 @@ export const TestingLoadingScreen: React.FC<TestingLoadingScreenProps> = ({ user
               </div>
             ))}
           </div>
+        </div>
+
+        {/* Skip Animation / Direct Entry Button */}
+        <div className="w-full flex items-center justify-between pt-1 text-xs">
+          <span className="text-slate-500 text-[11px]">Initializing dashboard layout...</span>
+          <button
+            type="button"
+            id="skip-loading-screen-btn"
+            onClick={triggerComplete}
+            className="inline-flex items-center gap-1.5 text-indigo-400 hover:text-indigo-300 font-medium px-3 py-1.5 rounded-lg bg-indigo-950/50 hover:bg-indigo-900/60 border border-indigo-800/40 transition-colors"
+          >
+            <span>Skip & Enter Now</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
         </div>
       </div>
     </div>

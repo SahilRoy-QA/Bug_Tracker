@@ -4,7 +4,7 @@ import {
   BarChart3, 
   Table, 
   PlusCircle, 
-  Download, 
+  Upload, 
   RefreshCw,
   Database,
   Sun,
@@ -265,7 +265,7 @@ export const Header: React.FC<HeaderProps> = ({
                       }}
                       className="w-full flex items-center gap-2 px-3 py-2 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50 transition"
                     >
-                      <Download className="w-4 h-4 text-slate-400" />
+                      <Upload className="w-4 h-4 text-slate-400" />
                       <span>Export CSV Report</span>
                     </button>
 
@@ -291,9 +291,9 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               onClick={onExportCSV}
               className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition border border-slate-200 dark:border-slate-700/80 cursor-pointer"
-              title="Download test execution & defect sheet CSV"
+              title="Export test execution & defect sheet CSV"
             >
-              <Download className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+              <Upload className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
               <span>Export</span>
             </button>
 
