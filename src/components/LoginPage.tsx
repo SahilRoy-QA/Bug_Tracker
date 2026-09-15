@@ -15,7 +15,8 @@ import {
   KeyRound,
   Loader2,
   ArrowLeft,
-  Shield
+  Shield,
+  Clock
 } from 'lucide-react';
 import { 
   validateCredentials, 
@@ -26,11 +27,17 @@ import { isUserAdmin } from '../utils/permissions.ts';
 
 interface LoginPageProps {
   onLoginSuccess: (username: string) => void;
+  sessionTimeoutNotice?: string | null;
+  onClearTimeoutNotice?: () => void;
 }
 
 type AuthMode = 'signin' | 'change_password';
 
-export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
+export const LoginPage: React.FC<LoginPageProps> = ({ 
+  onLoginSuccess,
+  sessionTimeoutNotice,
+  onClearTimeoutNotice
+}) => {
   const [mode, setMode] = useState<AuthMode>('signin');
 
   // Sign In state
@@ -55,6 +62,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
   const switchMode = (newMode: AuthMode) => {
     setError(null);
     setSuccessNotice(null);
+    onClearTimeoutNotice?.();
     setMode(newMode);
   };
 
@@ -63,6 +71,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     e.preventDefault();
     setError(null);
     setSuccessNotice(null);
+    onClearTimeoutNotice?.();
 
     const cleanUsername = username.trim().toLowerCase();
     if (!cleanUsername) {
@@ -206,7 +215,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
             SYSTEM ONLINE
           </span>
           <span className="hidden sm:inline-block text-[11px] font-mono text-slate-400">
-            v6.0.2 (Rev. 2611)
+            v6.1.0 (Rev. 2620)
           </span>
         </div>
       </header>
@@ -233,6 +242,16 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
             <Shield className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
             <span>Authorized Team Access · Managed by Sahil Roy</span>
           </div>
+
+          {/* Session Inactivity Timeout Alert Notice */}
+          {sessionTimeoutNotice && !error && (
+            <div className="mb-4 p-3.5 rounded-xl bg-amber-500/15 border border-amber-500/40 text-amber-200 text-xs flex items-start gap-2.5 animate-in fade-in">
+              <Clock className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+              <div className="flex-1 font-medium leading-relaxed">
+                {sessionTimeoutNotice}
+              </div>
+            </div>
+          )}
 
           {/* Error Notice */}
           {error && (
@@ -497,7 +516,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
 
       {/* Footer */}
       <footer className="relative z-10 w-full text-center py-4 text-xs text-slate-500">
-        <p>© {new Date().getFullYear()} Illusio Tech · Illusion_Dashboard v6.0.2 (Rev. 2611)</p>
+        <p>© {new Date().getFullYear()} Illusio Tech · Illusion_Dashboard v6.1.0 (Rev. 2620)</p>
       </footer>
     </div>
   );

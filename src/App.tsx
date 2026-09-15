@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Header } from './components/Header.tsx';
 import { DashboardView } from './components/DashboardView.tsx';
 import { DefectSheetView } from './components/DefectSheetView.tsx';
@@ -47,7 +47,7 @@ import {
   recordActivityLog,
   markSessionInactive
 } from './firebase/presenceService.ts';
-import { CheckCircle2, AlertCircle, Info, X } from 'lucide-react';
+import { CheckCircle2, AlertCircle, Info, X, Clock, ShieldAlert, LogOut } from 'lucide-react';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'sheet' | 'chat' | 'about' | 'admin'>('dashboard');
@@ -89,7 +89,59 @@ export default function App() {
     }
   });
 
+  // Inactivity timeout configuration: 5 minutes (300,000ms)
+  const INACTIVITY_TIMEOUT_MS = 5 * 60 * 1000;
+  const INACTIVITY_WARNING_MS = 4.5 * 60 * 1000; // Warning shown 30s before auto-logout
+
+  const lastActivityRef = useRef<number>(Date.now());
+  const [showInactivityWarning, setShowInactivityWarning] = useState<boolean>(false);
+  const [inactivityCountdown, setInactivityCountdown] = useState<number>(30);
+  const [sessionTimeoutNotice, setSessionTimeoutNotice] = useState<string | null>(null);
+
+  const handleLogout = useCallback((reason: 'user_action' | 'inactivity' = 'user_action') => {
+    if (currentUser) {
+      markSessionInactive(currentUser).catch(console.warn);
+      recordActivityLog({
+        type: 'LOGOUT',
+        username: currentUser,
+        details: reason === 'inactivity'
+          ? `User @${currentUser} automatically logged out due to 5 minutes of inactivity`
+          : `User @${currentUser} signed out from session`,
+        severity: reason === 'inactivity' ? 'warning' : 'info',
+        metadata: { username: currentUser, reason }
+      }).catch(console.warn);
+    }
+    try {
+      sessionStorage.removeItem('illusion_qa_user');
+      sessionStorage.removeItem('illusion_qa_role');
+      sessionStorage.removeItem('illusion_qa_name');
+      localStorage.removeItem('illusion_last_interaction');
+    } catch {}
+    setCurrentUser(null);
+    setPendingUser('');
+    setActiveTab('dashboard');
+    setShowInactivityWarning(false);
+    setAuthStage('login');
+    if (reason === 'inactivity') {
+      setSessionTimeoutNotice('You were automatically logged out due to 5 minutes of inactivity for security.');
+      showToast('Session expired: Auto-logged out after 5 minutes of inactivity', 'error');
+    } else {
+      setSessionTimeoutNotice(null);
+      showToast('Signed out of QA Dashboard', 'info');
+    }
+  }, [currentUser]);
+
+  const resetInactivityTimer = useCallback(() => {
+    const now = Date.now();
+    lastActivityRef.current = now;
+    try {
+      localStorage.setItem('illusion_last_interaction', now.toString());
+    } catch {}
+    setShowInactivityWarning(false);
+  }, []);
+
   const handleLoginSuccess = (user: string) => {
+    setSessionTimeoutNotice(null);
     setPendingUser(user);
     if (!isUserAdmin(user)) {
       setActiveTab('dashboard');
@@ -104,8 +156,11 @@ export default function App() {
       return;
     }
     setCurrentUser(validUser);
+    const now = Date.now();
+    lastActivityRef.current = now;
     try {
       sessionStorage.setItem('illusion_qa_user', validUser);
+      localStorage.setItem('illusion_last_interaction', now.toString());
     } catch {}
     if (!isUserAdmin(validUser)) {
       setActiveTab('dashboard');
@@ -123,28 +178,114 @@ export default function App() {
     }).catch(console.warn);
   };
 
-  const handleLogout = () => {
-    if (currentUser) {
-      markSessionInactive(currentUser).catch(console.warn);
-      recordActivityLog({
-        type: 'LOGOUT',
-        username: currentUser,
-        details: `User @${currentUser} signed out from session`,
-        severity: 'info',
-        metadata: { username: currentUser }
-      }).catch(console.warn);
+  // 5-Minute Inactivity Monitor: listens for any user interaction across the window
+  useEffect(() => {
+    if (!currentUser || authStage !== 'authenticated') {
+      setShowInactivityWarning(false);
+      return;
     }
+
+    // Initialize activity timestamp
+    const initialTime = Date.now();
+    lastActivityRef.current = initialTime;
     try {
-      sessionStorage.removeItem('illusion_qa_user');
-      sessionStorage.removeItem('illusion_qa_role');
-      sessionStorage.removeItem('illusion_qa_name');
+      localStorage.setItem('illusion_last_interaction', initialTime.toString());
     } catch {}
-    setCurrentUser(null);
-    setPendingUser('');
-    setActiveTab('dashboard');
-    setAuthStage('login');
-    showToast('Signed out of QA Dashboard', 'info');
-  };
+
+    let lastThrottledWrite = initialTime;
+
+    const registerInteraction = () => {
+      const now = Date.now();
+      lastActivityRef.current = now;
+
+      // Throttle localStorage updates to once every 2.5s for optimal performance
+      if (now - lastThrottledWrite > 2500) {
+        lastThrottledWrite = now;
+        try {
+          localStorage.setItem('illusion_last_interaction', now.toString());
+        } catch {}
+      }
+
+      // Any active interaction resets the warning alert immediately
+      setShowInactivityWarning(prev => (prev ? false : prev));
+    };
+
+    const interactionEvents = [
+      'mousemove',
+      'mousedown',
+      'keydown',
+      'touchstart',
+      'scroll',
+      'wheel',
+      'click'
+    ];
+
+    interactionEvents.forEach(evt => {
+      window.addEventListener(evt, registerInteraction, { passive: true });
+    });
+
+    // Check on tab focus or visibility change (e.g. user resumes from background)
+    const handleVisibilityOrFocus = () => {
+      if (document.visibilityState === 'visible') {
+        let latest = lastActivityRef.current;
+        try {
+          const stored = localStorage.getItem('illusion_last_interaction');
+          if (stored) {
+            const parsed = parseInt(stored, 10);
+            if (!isNaN(parsed) && parsed > latest) {
+              latest = parsed;
+              lastActivityRef.current = parsed;
+            }
+          }
+        } catch {}
+
+        const elapsed = Date.now() - latest;
+        if (elapsed >= INACTIVITY_TIMEOUT_MS) {
+          handleLogout('inactivity');
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityOrFocus);
+    window.addEventListener('focus', handleVisibilityOrFocus);
+
+    // 1-second interval check for inactivity timeout
+    const intervalId = setInterval(() => {
+      let latest = lastActivityRef.current;
+      try {
+        const stored = localStorage.getItem('illusion_last_interaction');
+        if (stored) {
+          const parsed = parseInt(stored, 10);
+          if (!isNaN(parsed) && parsed > latest) {
+            latest = parsed;
+            lastActivityRef.current = parsed;
+          }
+        }
+      } catch {}
+
+      const elapsed = Date.now() - latest;
+
+      if (elapsed >= INACTIVITY_TIMEOUT_MS) {
+        setShowInactivityWarning(false);
+        handleLogout('inactivity');
+      } else if (elapsed >= INACTIVITY_WARNING_MS) {
+        const remainingSeconds = Math.max(1, Math.ceil((INACTIVITY_TIMEOUT_MS - elapsed) / 1000));
+        setInactivityCountdown(remainingSeconds);
+        setShowInactivityWarning(true);
+      } else {
+        setShowInactivityWarning(false);
+      }
+    }, 1000);
+
+    return () => {
+      interactionEvents.forEach(evt => {
+        window.removeEventListener(evt, registerInteraction);
+      });
+      document.removeEventListener('visibilitychange', handleVisibilityOrFocus);
+      window.removeEventListener('focus', handleVisibilityOrFocus);
+      clearInterval(intervalId);
+    };
+  }, [currentUser, authStage, handleLogout, INACTIVITY_TIMEOUT_MS, INACTIVITY_WARNING_MS]);
 
   // Real-time user presence heartbeat: emits heartbeat every 20s to Firestore
   useEffect(() => {
@@ -182,13 +323,13 @@ export default function App() {
     }
   }, [activeTab, currentUser]);
 
-  // Version and Revision synchronization to 6.0.2 (Rev. 2611)
+  // Version and Revision synchronization to 6.1.0 (Rev. 2620)
   useEffect(() => {
-    if (projectMeta.version !== '6.0.2' || projectMeta.revision !== '2611') {
+    if (projectMeta.version !== '6.1.0' || projectMeta.revision !== '2620') {
       const updatedMeta: ProjectMeta = {
         ...projectMeta,
-        version: '6.0.2',
-        revision: '2611'
+        version: '6.1.0',
+        revision: '2620'
       };
       setProjectMeta(updatedMeta);
       saveStoredProject(updatedMeta);
@@ -565,7 +706,13 @@ export default function App() {
 
   // Render Login Gate before accessing dashboard
   if (authStage === 'login') {
-    return <LoginPage onLoginSuccess={handleLoginSuccess} />;
+    return (
+      <LoginPage 
+        onLoginSuccess={handleLoginSuccess} 
+        sessionTimeoutNotice={sessionTimeoutNotice}
+        onClearTimeoutNotice={() => setSessionTimeoutNotice(null)}
+      />
+    );
   }
 
   // Render Testing-themed Loading Animation after login
@@ -698,7 +845,7 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
           <span>© {new Date().getFullYear()} Illusio Tech · Illusion_Dashboard</span>
           <span className="font-mono text-[11px] text-slate-400 dark:text-slate-500">
-            Version 6.0.2 · Revision 2611 · Enterprise QA Suite
+            Version 6.1.0 · Revision 2620 · Enterprise QA Suite
           </span>
         </div>
       </footer>
@@ -771,6 +918,52 @@ export default function App() {
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-rose-600 hover:bg-rose-500 text-white shadow-md shadow-rose-600/20 transition disabled:opacity-50"
               >
                 {isResetting ? 'Cleaning...' : 'Yes, Clean Database'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Inactivity Warning Dialog: Triggers 30s before the 5-minute timeout */}
+      {showInactivityWarning && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white dark:bg-slate-900 border border-amber-400/80 dark:border-amber-500/50 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div className="flex items-start gap-3.5">
+              <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-950/80 border border-amber-300 dark:border-amber-800 flex items-center justify-center shrink-0 text-amber-600 dark:text-amber-400">
+                <Clock className="w-5 h-5 animate-pulse" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                  Session Inactivity Notice
+                </h3>
+                <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                  You have been inactive for nearly 5 minutes. For security and test data integrity, your QA session will automatically log out in:
+                </p>
+                <div className="pt-2 flex items-center gap-2">
+                  <span className="font-mono text-2xl font-black text-rose-600 dark:text-rose-400">
+                    {inactivityCountdown}s
+                  </span>
+                  <span className="text-xs text-slate-500 dark:text-slate-400">
+                    remaining before auto log out
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => handleLogout('user_action')}
+                className="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition cursor-pointer"
+              >
+                Log Out Now
+              </button>
+              <button
+                type="button"
+                onClick={resetInactivityTimer}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-600/20 transition cursor-pointer"
+              >
+                <span>Keep Me Signed In</span>
               </button>
             </div>
           </div>
