@@ -99,13 +99,13 @@ export const TestingLogo: React.FC<TestingLogoProps> = ({ size = 'lg', showSubti
 
       {/* Brand Title */}
       <div className="text-center mt-3">
-        <h1 className={`${text} font-extrabold tracking-tight text-slate-900 dark:text-white flex items-center justify-center gap-1.5`}>
-          <span>Illusion</span>
-          <span className="text-indigo-600 dark:text-indigo-400">_Dashboard</span>
+        <h1 className={`${text} font-extrabold tracking-tight flex items-center justify-center gap-1.5`}>
+          <span className="text-white font-black tracking-tight drop-shadow-xs">Illusion</span>
+          <span className="text-indigo-400 font-extrabold">_Dashboard</span>
         </h1>
         {showSubtitle && (
-          <p className={`${sub} text-slate-500 dark:text-slate-400 font-medium tracking-wide mt-1 flex items-center justify-center gap-1.5`}>
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block"></span>
+          <p className={`${sub} text-slate-400 font-medium tracking-wide mt-1 flex items-center justify-center gap-1.5`}>
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block"></span>
             ENTERPRISE QA &amp; DEFECT MANAGEMENT
           </p>
         )}

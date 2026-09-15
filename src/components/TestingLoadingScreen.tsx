@@ -19,7 +19,7 @@ export const TestingLoadingScreen: React.FC<TestingLoadingScreenProps> = ({ user
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [logs, setLogs] = useState<string[]>([
     `[INFO] Session initiated for QA engineer: @${username}`,
-    `[RUNNER] Booting Illusio automated QA test harness v6.0.1 (Rev 2601)...`,
+    `[RUNNER] Booting Illusio automated QA test harness v6.0.2 (Rev 2611)...`,
   ]);
 
   const testSteps: TestStep[] = [

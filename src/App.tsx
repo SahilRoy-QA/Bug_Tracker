@@ -182,13 +182,13 @@ export default function App() {
     }
   }, [activeTab, currentUser]);
 
-  // Version and Revision synchronization to 6.0.1 (Rev. 2601)
+  // Version and Revision synchronization to 6.0.2 (Rev. 2611)
   useEffect(() => {
-    if (projectMeta.version !== '6.0.1' || projectMeta.revision !== '2601') {
+    if (projectMeta.version !== '6.0.2' || projectMeta.revision !== '2611') {
       const updatedMeta: ProjectMeta = {
         ...projectMeta,
-        version: '6.0.1',
-        revision: '2601'
+        version: '6.0.2',
+        revision: '2611'
       };
       setProjectMeta(updatedMeta);
       saveStoredProject(updatedMeta);
@@ -698,7 +698,7 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
           <span>© {new Date().getFullYear()} Illusio Tech · Illusion_Dashboard</span>
           <span className="font-mono text-[11px] text-slate-400 dark:text-slate-500">
-            Version 6.0.1 · Revision 2601 · Enterprise QA Suite
+            Version 6.0.2 · Revision 2611 · Enterprise QA Suite
           </span>
         </div>
       </footer>

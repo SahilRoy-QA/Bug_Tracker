@@ -138,9 +138,9 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
               <div className="flex flex-col shrink-0">
                 <div className="flex items-center gap-1.5">
-                  <h1 className="text-xs sm:text-sm md:text-base font-bold tracking-tight text-slate-900 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors whitespace-nowrap">
-                    <span className="inline sm:hidden">Illusion</span>
-                    <span className="hidden sm:inline">Illusion_Dashboard</span>
+                  <h1 className="text-xs sm:text-sm md:text-base font-extrabold tracking-tight group-hover:opacity-90 transition-opacity whitespace-nowrap">
+                    <span className="text-indigo-600 dark:text-indigo-400 font-black">Illusion</span>
+                    <span className="hidden sm:inline text-slate-900 dark:text-white">_Dashboard</span>
                   </h1>
                 </div>
                 <p className="text-[10px] text-slate-500 dark:text-slate-400 hidden xl:block whitespace-nowrap">
